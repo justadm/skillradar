@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SkillRadar — UI Kit</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <script>
+      (() => {
+        const stored = localStorage.getItem('sr-theme') || 'auto';
+        const preferred = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-bs-theme', stored === 'auto' ? preferred : stored);
+      })();
+    </script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg bg-body-tertiary border-bottom sticky-top">
+      <div class="container">
+        <a class="navbar-brand d-flex align-items-center fw-semibold" href="index.html">
+          <span class="sr-logo">SR</span>
+          SkillRadar UI Kit
+        </a>
+        <div class="d-flex align-items-center gap-2">
+          <div class="dropdown">
+            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+              Тема
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><button class="dropdown-item" data-sr-theme="light">Светлая</button></li>
+              <li><button class="dropdown-item" data-sr-theme="dark">Темная</button></li>
+              <li><button class="dropdown-item" data-sr-theme="auto">Авто</button></li>
+            </ul>
+          </div>
+          <a class="btn btn-primary" href="https://t.me/skillradar_hr_bot" target="_blank" rel="noreferrer">Открыть бота</a>
+        </div>
+      </div>
+    </nav>
+
+    <main class="sr-section">
+      <div class="container">
+        <section class="mb-5">
+          <h1 class="h3 fw-semibold mb-3">UI Kit</h1>
+          <p class="sr-muted">Базовые компоненты и стили SkillRadar на Bootstrap.</p>
+        </section>
+
+        <section class="mb-5">
+          <h2 class="h5 fw-semibold mb-3">Кнопки и бейджи</h2>
+          <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-primary">Primary</button>
+            <button class="btn btn-outline-secondary">Secondary</button>
+            <button class="btn btn-success">Success</button>
+            <button class="btn btn-warning">Warning</button>
+            <button class="btn btn-danger">Danger</button>
+            <span class="badge text-bg-primary">B2B</span>
+            <span class="badge text-bg-success">Готов</span>
+          </div>
+        </section>
+
+        <section class="mb-5">
+          <h2 class="h5 fw-semibold mb-3">Карточки</h2>
+          <div class="row g-3">
+            <div class="col-md-4">
+              <div class="card sr-card h-100">
+                <div class="card-body">
+                  <h3 class="h6">Рынок роли</h3>
+                  <p class="sr-muted">Спрос, вилки, навыки.</p>
+                  <button class="btn btn-outline-secondary btn-sm">Открыть</button>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="card sr-card h-100 border border-primary">
+                <div class="card-body">
+                  <span class="badge text-bg-primary">Популярно</span>
+                  <h3 class="h6 mt-2">Шаблон вакансии</h3>
+                  <p class="sr-muted">Готовый текст с вилкой.</p>
+                  <button class="btn btn-primary btn-sm">Создать</button>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="card sr-card h-100">
+                <div class="card-body">
+                  <h3 class="h6">Конкуренты</h3>
+                  <p class="sr-muted">ТОП‑10 работодателей.</p>
+                  <button class="btn btn-outline-secondary btn-sm">Скачать CSV</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="mb-5">
+          <h2 class="h5 fw-semibold mb-3">Форма</h2>
+          <div class="card sr-card">
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label">Роль</label>
+                  <input class="form-control" placeholder="Backend, QA, Product" />
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Локация</label>
+                  <select class="form-select">
+                    <option>Москва</option>
+                    <option>СПб</option>
+                    <option>Удалённо</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Зарплата от</label>
+                  <input class="form-control" placeholder="200 000" />
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Формат</label>
+                  <select class="form-select">
+                    <option>Гибрид</option>
+                    <option>Офис</option>
+                    <option>Удалёнка</option>
+                  </select>
+                </div>
+                <div class="col-12">
+                  <button class="btn btn-primary">Сформировать отчёт</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="mb-5">
+          <h2 class="h5 fw-semibold mb-3">Таблица</h2>
+          <div class="card sr-card">
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table align-middle">
+                  <thead>
+                    <tr>
+                      <th>Роль</th>
+                      <th>Регион</th>
+                      <th>Дата</th>
+                      <th>Статус</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Backend Node.js</td>
+                      <td>Москва</td>
+                      <td>2026‑02‑08</td>
+                      <td><span class="badge text-bg-success">Готов</span></td>
+                    </tr>
+                    <tr>
+                      <td>QA Automation</td>
+                      <td>СПб</td>
+                      <td>2026‑02‑07</td>
+                      <td><span class="badge text-bg-warning">В работе</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="sr-footer">
+      <div class="container d-flex justify-content-between flex-wrap gap-2">
+        <span>SkillRadar © 2026</span>
+        <span>UI Kit</span>
+      </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="theme.js"></script>
+  </body>
+</html>

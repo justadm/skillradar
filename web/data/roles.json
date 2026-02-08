@@ -1,0 +1,7 @@
+{
+  "items": [
+    {"title": "Backend Node.js", "region": "Москва", "level": "Middle+", "skills": "node.js, sql, docker, rest"},
+    {"title": "QA Automation", "region": "СПб", "level": "Middle", "skills": "python, selenium, api, ci"},
+    {"title": "Product Manager", "region": "Казань", "level": "Senior", "skills": "discovery, analytics, roadmap"}
+  ]
+}

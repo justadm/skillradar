@@ -1,0 +1,16 @@
+{
+  "leaders": [
+    {"company": "Acme Product", "count": 24},
+    {"company": "Pixel Works", "count": 19},
+    {"company": "Beta Tech", "count": 18},
+    {"company": "Delta Analytics", "count": 16},
+    {"company": "TestLab", "count": 14},
+    {"company": "Mobile Fox", "count": 12},
+    {"company": "BankCore", "count": 11},
+    {"company": "NeuroLab", "count": 9},
+    {"company": "Gamma QA", "count": 8},
+    {"company": "Omega Cloud", "count": 7}
+  ],
+  "index": "0.74",
+  "summary": "Высокая плотность вакансий и активный найм."
+}

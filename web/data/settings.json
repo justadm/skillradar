@@ -1,0 +1,10 @@
+{
+  "notifications": [
+    {"label": "Еженедельный отчёт", "enabled": true},
+    {"label": "Алёрты по зарплатам", "enabled": false}
+  ],
+  "limits": [
+    {"label": "Запросов", "value": "120 / месяц"},
+    {"label": "Экспортов", "value": "30 / месяц"}
+  ]
+}

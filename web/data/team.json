@@ -1,0 +1,7 @@
+{
+  "members": [
+    {"name": "Константин Т.", "role": "Owner", "access": "Admin"},
+    {"name": "HR Lead", "role": "Editor", "access": "B2B аналитика"},
+    {"name": "Recruiter", "role": "Viewer", "access": "Отчёты"}
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "plans": [
+    {"name": "Starter", "price": "$99", "desc": "До 3 отчётов в месяц, 1 команда.", "cta": "Выбрать"},
+    {"name": "Pro", "price": "$199", "desc": "До 10 отчётов, экспорт CSV/PDF.", "cta": "Текущий", "featured": true},
+    {"name": "Enterprise", "price": "Custom", "desc": "SLA, SSO, кастомные отчёты.", "cta": "Связаться"}
+  ]
+}

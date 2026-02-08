@@ -1,0 +1,7 @@
+{
+  "items": [
+    {"role": "Backend Node.js", "region": "Москва", "type": "Рынок роли", "date": "2026-02-08", "status": "Готов"},
+    {"role": "Product Manager", "region": "Казань", "type": "Конкуренты", "date": "2026-02-07", "status": "В работе"},
+    {"role": "QA Automation", "region": "СПб", "type": "Шаблон вакансии", "date": "2026-02-06", "status": "Готов"}
+  ]
+}

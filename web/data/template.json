@@ -1,0 +1,17 @@
+{
+  "role": "Backend Node.js (Москва)",
+  "level": "Middle+",
+  "format": "Гибрид",
+  "requirements": [
+    "Node.js, TypeScript, SQL",
+    "Docker, CI/CD, REST",
+    "Опыт 3+ года, продуктовые команды"
+  ],
+  "tasks": [
+    "Разработка и поддержка API",
+    "Оптимизация производительности",
+    "Взаимодействие с аналитиками и DevOps"
+  ],
+  "salary": "180–260k",
+  "salaryNote": "Конкурентный уровень для Москвы."
+}
