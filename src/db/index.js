@@ -54,7 +54,9 @@ function ensureColumn(table, column, type, defaultValue) {
   const info = db.prepare(`PRAGMA table_info(${table})`).all();
   const exists = info.some(c => c.name === column);
   if (!exists) {
-    db.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${type} DEFAULT ?`).run(defaultValue);
+    const isNumber = typeof defaultValue === 'number';
+    const safe = isNumber ? String(defaultValue) : `'${String(defaultValue).replace(/'/g, "''")}'`;
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type} DEFAULT ${safe}`);
   }
 }
 
