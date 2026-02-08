@@ -2,3 +2,7 @@ node_modules
 .env
 /data/*.sqlite
 /data/*.log
+/data/
+/bot.log
+/.npm-cache/
+package-lock.json
