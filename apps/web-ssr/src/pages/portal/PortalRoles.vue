@@ -59,6 +59,7 @@ import { onMounted, reactive, ref } from 'vue';
 import { useApi } from '../../composables/useApi';
 import { useAuth } from '../../composables/useAuth';
 import { useHead } from '../../composables/useHead';
+import { pushToast } from '../../composables/useToast';
 
 const api = useApi();
 const { isAuthed } = useAuth();
@@ -89,14 +90,17 @@ const toggleForm = () => {
 const submit = async () => {
   if (!isAuthed.value) {
     formMessage.value = 'Нужна авторизация.';
+    pushToast('Войдите, чтобы создавать профили ролей.', 'info');
     return;
   }
   try {
     const res = await api.createRole(form);
     formMessage.value = `Профиль создан: ${res.id}`;
     showForm.value = false;
+    pushToast('Профиль роли создан.', 'success');
   } catch {
     formMessage.value = 'Не удалось создать профиль.';
+    pushToast('Не удалось создать профиль роли.', 'danger');
   }
 };
 

@@ -58,6 +58,7 @@ import { onMounted, reactive, ref } from 'vue';
 import { useApi } from '../../composables/useApi';
 import { useAuth } from '../../composables/useAuth';
 import { useHead } from '../../composables/useHead';
+import { pushToast } from '../../composables/useToast';
 
 const api = useApi();
 const { isAuthed } = useAuth();
@@ -88,14 +89,17 @@ const toggleForm = () => {
 const submit = async () => {
   if (!isAuthed.value) {
     formMessage.value = 'Нужна авторизация.';
+    pushToast('Войдите, чтобы приглашать участников.', 'info');
     return;
   }
   try {
     await api.inviteTeam(form);
     formMessage.value = 'Приглашение отправлено.';
     showForm.value = false;
+    pushToast('Приглашение отправлено.', 'success');
   } catch {
     formMessage.value = 'Не удалось отправить приглашение.';
+    pushToast('Не удалось отправить приглашение.', 'danger');
   }
 };
 

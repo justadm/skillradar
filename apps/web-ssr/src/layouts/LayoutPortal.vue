@@ -57,6 +57,7 @@
         </div>
       </div>
     </main>
+    <ToastHost />
   </div>
 </template>
 
@@ -65,6 +66,7 @@ import { computed, onMounted } from 'vue';
 import { RouterLink } from 'vue-router';
 import { useAuth } from '../composables/useAuth';
 import { useUser } from '../composables/useUser';
+import ToastHost from '../components/ToastHost.vue';
 
 const { isAuthed, setToken } = useAuth();
 const { profile, loadProfile, setProfile } = useUser();
