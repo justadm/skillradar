@@ -649,7 +649,15 @@ function startBot() {
       return;
     }
 
-    if (/(.)\1{2,}/.test(text)) {
+    const tokens = text.toLowerCase().split(/\s+/).filter(Boolean);
+    const keywords = [
+      'backend', 'frontend', 'fullstack', 'qa', 'аналит', 'аналитик', 'data',
+      'product', 'manager', 'продакт', 'менеджер', 'designer', 'дизайнер',
+      'разработчик', 'инженер', 'dev', 'node', 'python', 'java', 'go', 'react',
+      'sql', 'ml', 'mobile', 'android', 'ios', 'flutter', 'bitrix', 'bitrix24'
+    ];
+    const hasKeyword = keywords.some(k => text.toLowerCase().includes(k));
+    if (!hasKeyword && tokens.length <= 1) {
       await ctx.reply('Запрос выглядит случайным. Пример: «Backend, 3+ года, Node.js, от 200к».');
       return;
     }
