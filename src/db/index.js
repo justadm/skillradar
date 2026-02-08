@@ -83,6 +83,11 @@ function saveQuery(userId, type, rawText, filters) {
     .run(userId, type, rawText, JSON.stringify(filters), new Date().toISOString());
 }
 
+function listRecentQueries(limit = 10) {
+  const db = getDb();
+  return db.prepare('SELECT q.id, q.user_id, q.type, q.raw_text, q.created_at, u.tg_id FROM queries q JOIN users u ON u.id = q.user_id ORDER BY q.id DESC LIMIT ?').all(limit);
+}
+
 function getVacancyCache(vacancyId) {
   const db = getDb();
   return db.prepare('SELECT raw_json, fetched_at FROM vacancies_cache WHERE vacancy_id = ?').get(vacancyId);
@@ -129,5 +134,6 @@ module.exports = {
   getMarketCache,
   saveMarketCache,
   getLlmCache,
-  saveLlmCache
+  saveLlmCache,
+  listRecentQueries
 };

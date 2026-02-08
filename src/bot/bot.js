@@ -4,13 +4,14 @@ const { searchVacancies } = require('../hh/client');
 const { criteriaToSearchParams } = require('../hh/mappers');
 const { rankVacancies } = require('../score/scoring');
 const { computeMarketStats } = require('../market/market');
-const { getOrCreateUser, listStopWords, addStopWord, removeStopWord, saveQuery, getMarketCache, saveMarketCache } = require('../db');
+const { getOrCreateUser, listStopWords, addStopWord, removeStopWord, saveQuery, getMarketCache, saveMarketCache, listRecentQueries } = require('../db');
 const { escapeHtml, includesAny } = require('../utils/text');
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const STARTED_AT = Date.now();
 const RATE_LIMIT_WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS || 60000);
 const RATE_LIMIT_MAX = Number(process.env.RATE_LIMIT_MAX || 10);
+const ADMIN_TG_IDS = String(process.env.ADMIN_TG_IDS || '').split(',').map(s => s.trim()).filter(Boolean);
 
 const rateBuckets = new Map();
 
@@ -30,6 +31,10 @@ function setState(tgId, state) {
 
 function getState(tgId) {
   return userState.get(String(tgId)) || STATE.IDLE;
+}
+
+function isAdmin(tgId) {
+  return ADMIN_TG_IDS.includes(String(tgId));
 }
 
 function rateLimitOk(tgId) {
@@ -215,6 +220,22 @@ function startBot() {
   bot.command('reset', async ctx => {
     setState(ctx.from.id, STATE.IDLE);
     await ctx.reply('Состояние сброшено. Главное меню:', mainMenu());
+  });
+
+  bot.command('admin', async ctx => {
+    if (!isAdmin(ctx.from.id)) {
+      await ctx.reply('Недостаточно прав.');
+      return;
+    }
+    const items = listRecentQueries(10);
+    if (!items.length) {
+      await ctx.reply('Нет запросов.');
+      return;
+    }
+    const lines = items.map(q => {
+      return `#${q.id} [${q.type}] tg:${q.tg_id} ${q.created_at}\n${q.raw_text}`;
+    });
+    await ctx.reply(lines.join('\n\n'));
   });
 
   bot.start(async ctx => {
