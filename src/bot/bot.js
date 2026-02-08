@@ -237,7 +237,7 @@ function startBot() {
       `HH cache TTL: ${process.env.HH_CACHE_TTL_MS || '21600000'}`,
       `LLM cache TTL: ${process.env.LLM_CACHE_TTL_MS || '86400000'}`,
       `USE_MOCKS: ${String(process.env.USE_MOCKS || 'false')}`,
-      `DB: ${process.env.DB_PATH || 'data/db.sqlite'}`
+      `DB: ${process.env.DB_PATH ? 'configured' : 'data/db.sqlite'}`
     ].join('\n');
     await ctx.reply(msg, { parse_mode: 'HTML' });
   });
@@ -258,9 +258,14 @@ function startBot() {
       '• Навыки (React, Node.js, SQL)',
       '• Зарплата (от/до, в рублях)',
       '',
-      'Команды: /start, /status, /reset'
+      'Команды: /start, /help, /status, /reset'
     ].join('\n');
     await ctx.reply(msg, { parse_mode: 'HTML' });
+  });
+
+  bot.command('id', async ctx => {
+    const chat = ctx.chat;
+    await ctx.reply(`chat_id: ${chat.id}`);
   });
 
   bot.command('admin', async ctx => {
