@@ -211,7 +211,7 @@ async function sendNextBatch(ctx) {
     await ctx.reply('Нет активного поиска. Нажми «Подбор вакансий».', mainMenu());
     return;
   }
-  const batchSize = 5;
+  const batchSize = 3;
   const slice = entry.items.slice(entry.index, entry.index + batchSize);
   entry.index += slice.length;
 
