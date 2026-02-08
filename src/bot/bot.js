@@ -236,6 +236,7 @@ function startBot() {
       `HH area: ${process.env.HH_AREA_DEFAULT || '113'}`,
       `HH cache TTL: ${process.env.HH_CACHE_TTL_MS || '21600000'}`,
       `LLM cache TTL: ${process.env.LLM_CACHE_TTL_MS || '86400000'}`,
+      `USE_MOCKS: ${String(process.env.USE_MOCKS || 'false')}`,
       `DB: ${process.env.DB_PATH || 'data/db.sqlite'}`
     ].join('\n');
     await ctx.reply(msg, { parse_mode: 'HTML' });
@@ -244,6 +245,22 @@ function startBot() {
   bot.command('reset', async ctx => {
     setState(ctx.from.id, STATE.IDLE);
     await ctx.reply('Состояние сброшено. Главное меню:', mainMenu());
+  });
+
+  bot.command('help', async ctx => {
+    const msg = [
+      '<b>Как формулировать запрос</b>',
+      'Пример: «Backend, 3+ года, Node.js/SQL, от 200к».',
+      '',
+      '<b>Что можно указать</b>',
+      '• Роль (backend/frontend/QA/аналитик)',
+      '• Опыт (junior/middle/senior или годы)',
+      '• Навыки (React, Node.js, SQL)',
+      '• Зарплата (от/до, в рублях)',
+      '',
+      'Команды: /start, /status, /reset'
+    ].join('\n');
+    await ctx.reply(msg, { parse_mode: 'HTML' });
   });
 
   bot.command('admin', async ctx => {
@@ -333,7 +350,7 @@ function startBot() {
       }
     } catch (err) {
       console.error('[bot:error]', err);
-      await ctx.reply(`Ошибка: ${err.message || 'что-то пошло не так'}`);
+      await ctx.reply('Похоже, есть проблема с сетью или API. Попробуйте позже.');
       await ctx.reply('Главное меню', mainMenu());
     }
   });
