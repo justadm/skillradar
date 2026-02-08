@@ -1,0 +1,16 @@
+[Unit]
+Description=SkillRadar Telegram Bot
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/skillradar
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/env bash -lc "source /opt/nvm/nvm.sh && nvm use 22 && npm start"
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/skillradar.log
+StandardError=append:/var/log/skillradar.log
+
+[Install]
+WantedBy=multi-user.target

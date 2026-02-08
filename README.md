@@ -203,3 +203,41 @@ npm start
 ---
 
 Если нужно, добавлю техническую спецификацию API, схемы БД и каркас кода.
+
+---
+
+## 14. Deploy (Ubuntu + systemd)
+
+1. Клонировать репозиторий:
+```bash
+git clone git@github.com:justadm/skillradar.git /opt/skillradar
+cd /opt/skillradar
+```
+
+2. Установить Node 22 (через nvm) и зависимости:
+```bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+source ~/.nvm/nvm.sh
+nvm install 22
+nvm use 22
+npm install
+```
+
+3. Создать `.env`:
+```bash
+cp .env.example .env
+```
+
+4. Установить systemd unit:
+```bash
+sudo cp /opt/skillradar/deploy/skillradar.service /etc/systemd/system/skillradar.service
+sudo systemctl daemon-reload
+sudo systemctl enable skillradar
+sudo systemctl start skillradar
+sudo systemctl status skillradar
+```
+
+Логи:
+```bash
+sudo tail -f /var/log/skillradar.log
+```
