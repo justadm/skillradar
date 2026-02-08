@@ -15,6 +15,7 @@ const ADMIN_TG_IDS = String(process.env.ADMIN_TG_IDS || '').split(',').map(s => 
 
 const rateBuckets = new Map();
 const searchCache = new Map();
+const savedQueries = new Map();
 
 const STATE = {
   IDLE: 'idle',
@@ -70,7 +71,7 @@ function stoplistMenu() {
 
 function paginationMenu() {
   return Markup.keyboard([
-    ['Показать еще'],
+    ['Показать еще', 'Сохранить запрос'],
     ['Главное меню']
   ]).resize();
 }
@@ -107,9 +108,12 @@ function extractUserFilters(text) {
 
   const remote = /удаленк|remote|удаленно/.test(t);
   const office = /офис/.test(t);
+  const hybrid = /гибрид|hybrid/.test(t);
   const fullDay = /полный день/.test(t);
+  const partTime = /частичн|part[-\s]?time/.test(t);
+  const project = /проектн|project/.test(t);
 
-  return { location, remote, office, fullDay };
+  return { location, remote, office, hybrid, fullDay, partTime, project };
 }
 
 function applyUserFilters(items, filters) {
@@ -131,8 +135,24 @@ function applyUserFilters(items, filters) {
       return !schedule.includes('remote');
     });
   }
+  if (filters.hybrid) {
+    res = res.filter(v => {
+      const schedule = String(v.schedule?.id || '').toLowerCase();
+      return schedule.includes('flex') || schedule.includes('hybrid');
+    });
+  }
   if (filters.fullDay) {
     res = res.filter(v => String(v.schedule?.id || '').toLowerCase().includes('fullday'));
+  }
+  if (filters.partTime) {
+    res = res.filter(v => {
+      const schedule = String(v.schedule?.id || '').toLowerCase();
+      const employment = String(v.employment?.id || '').toLowerCase();
+      return schedule.includes('part') || employment.includes('part');
+    });
+  }
+  if (filters.project) {
+    res = res.filter(v => String(v.employment?.id || '').toLowerCase().includes('project'));
   }
   return res;
 }
@@ -344,7 +364,8 @@ function startBot() {
       '• Опыт (junior/middle/senior или годы)',
       '• Навыки (React, Node.js, SQL)',
       '• Зарплата (от/до, в рублях)',
-      '• Локация/формат (Москва/СПб, удаленка/офис)',
+      '• Локация/формат (Москва/СПб, удаленка/офис/гибрид)',
+      '• Занятость (полная/частичная/проектная)',
       '',
       'Команды: /start, /help, /status, /reset'
     ].join('\n');
@@ -415,6 +436,28 @@ function startBot() {
   });
 
   bot.hears('Показать еще', async ctx => {
+    await sendNextBatch(ctx);
+  });
+
+  bot.hears('Сохранить запрос', async ctx => {
+    const tgId = ctx.from.id;
+    const entry = searchCache.get(String(tgId));
+    if (!entry) {
+      await ctx.reply('Нет активного поиска для сохранения.', mainMenu());
+      return;
+    }
+    savedQueries.set(String(tgId), entry);
+    await ctx.reply('Запрос сохранен. Используй команду /repeat, чтобы повторить.', mainMenu());
+  });
+
+  bot.command('repeat', async ctx => {
+    const tgId = ctx.from.id;
+    const entry = savedQueries.get(String(tgId));
+    if (!entry) {
+      await ctx.reply('Нет сохраненного запроса.');
+      return;
+    }
+    searchCache.set(String(tgId), { ...entry, index: 0 });
     await sendNextBatch(ctx);
   });
 
