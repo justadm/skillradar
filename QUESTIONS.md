@@ -5,3 +5,9 @@
 3. Report export format priority (PDF vs CSV first)?
 4. Data retention policy for reports and queries?
 5. Multi-tenant org model (single org per user vs many)?
+
+## Notes from latest discussion (фиксируем решения/направления)
+
+- Архитектура: единый сервер `NestJS + Vite SSR middleware` (один процесс, общая авторизация, проще деплой).
+- Доступ: авторизация на весь сайт; неавторизованные видят демо‑данные в публичных разделах.
+- UI: Bootstrap предпочтителен; Tailwind допустим, если будет явный выигрыш.
