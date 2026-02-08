@@ -41,10 +41,12 @@ require('dotenv').config();
 
 const { initDb } = require('./db');
 const { startBot } = require('./bot/bot');
+const { startWebServer } = require('./web/server');
 
 function main() {
   initDb();
   startBot();
+  startWebServer();
 }
 
 main();

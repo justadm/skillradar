@@ -45,6 +45,33 @@ function initDb() {
       value_json TEXT NOT NULL,
       fetched_at TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS orgs (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS web_users (
+      id TEXT PRIMARY KEY,
+      email TEXT UNIQUE NOT NULL,
+      name TEXT,
+      role TEXT NOT NULL,
+      org_id TEXT NOT NULL,
+      status TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS auth_tokens (
+      token TEXT PRIMARY KEY,
+      email TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      used_at TEXT
+    );
+    CREATE TABLE IF NOT EXISTS sessions (
+      token TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
   `);
 
   ensureColumn('users', 'mode', 'TEXT', 'jobseeker');
@@ -144,6 +171,70 @@ function saveLlmCache(cacheKey, value) {
     .run(String(cacheKey), JSON.stringify(value), new Date().toISOString());
 }
 
+function createAuthToken(email, ttlMinutes = 15) {
+  const db = getDb();
+  const token = require('crypto').randomUUID();
+  const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000).toISOString();
+  db.prepare('INSERT INTO auth_tokens (token, email, expires_at) VALUES (?, ?, ?)')
+    .run(token, email.toLowerCase(), expiresAt);
+  return { token, expiresAt };
+}
+
+function consumeAuthToken(token) {
+  const db = getDb();
+  const row = db.prepare('SELECT token, email, expires_at, used_at FROM auth_tokens WHERE token = ?').get(token);
+  if (!row) return null;
+  if (row.used_at) return null;
+  if (new Date(row.expires_at).getTime() < Date.now()) return null;
+  db.prepare('UPDATE auth_tokens SET used_at = ? WHERE token = ?').run(new Date().toISOString(), token);
+  return { email: row.email };
+}
+
+function ensureDefaultOrg() {
+  const db = getDb();
+  const existing = db.prepare('SELECT id FROM orgs ORDER BY created_at ASC LIMIT 1').get();
+  if (existing) return existing.id;
+  const id = require('crypto').randomUUID();
+  db.prepare('INSERT INTO orgs (id, name, created_at) VALUES (?, ?, ?)')
+    .run(id, process.env.DEFAULT_ORG_NAME || 'SkillRadar Demo', new Date().toISOString());
+  return id;
+}
+
+function createOrGetWebUser(email) {
+  const db = getDb();
+  const existing = db.prepare('SELECT * FROM web_users WHERE email = ?').get(email.toLowerCase());
+  if (existing) return existing;
+  const orgId = ensureDefaultOrg();
+  const count = db.prepare('SELECT COUNT(*) as cnt FROM web_users').get().cnt;
+  const role = count === 0 ? 'owner' : 'analyst';
+  const id = require('crypto').randomUUID();
+  db.prepare('INSERT INTO web_users (id, email, name, role, org_id, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run(id, email.toLowerCase(), email.split('@')[0], role, orgId, 'active', new Date().toISOString());
+  return db.prepare('SELECT * FROM web_users WHERE id = ?').get(id);
+}
+
+function createSession(userId, ttlDays = 30) {
+  const db = getDb();
+  const token = require('crypto').randomUUID();
+  const expiresAt = new Date(Date.now() + ttlDays * 24 * 60 * 60 * 1000).toISOString();
+  db.prepare('INSERT INTO sessions (token, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)')
+    .run(token, userId, expiresAt, new Date().toISOString());
+  return { token, expiresAt };
+}
+
+function getSessionUser(token) {
+  const db = getDb();
+  const session = db.prepare('SELECT token, user_id, expires_at FROM sessions WHERE token = ?').get(token);
+  if (!session) return null;
+  if (new Date(session.expires_at).getTime() < Date.now()) return null;
+  return db.prepare('SELECT * FROM web_users WHERE id = ?').get(session.user_id);
+}
+
+function getWebUserById(userId) {
+  const db = getDb();
+  return db.prepare('SELECT * FROM web_users WHERE id = ?').get(userId);
+}
+
 module.exports = {
   initDb,
   getDb,
@@ -160,5 +251,11 @@ module.exports = {
   saveLlmCache,
   listRecentQueries,
   setUserMode,
-  getUserMode
+  getUserMode,
+  createAuthToken,
+  consumeAuthToken,
+  createSession,
+  getSessionUser,
+  createOrGetWebUser,
+  getWebUserById
 };

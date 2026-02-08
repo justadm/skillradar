@@ -255,6 +255,11 @@ sudo tail -f /var/log/skillradar.log
 
 ## 15. Web (Landing)
 
+Web‑сервер (статика + API):
+```bash
+npm run dev
+```
+
 Локально открыть:
 ```bash
 open /Users/just/Sites/sbdb.loc/web/index.html
@@ -274,3 +279,7 @@ UI‑kit:
 ```bash
 open /Users/just/Sites/sbdb.loc/web/ui-kit.html
 ```
+
+API (dev):
+- `POST /api/v1/auth/login` → вернёт `debug_token` в non‑prod
+- `POST /api/v1/auth/verify` → выдаст `Bearer` токен
