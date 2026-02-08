@@ -8,7 +8,10 @@
       <button class="btn btn-primary btn-sm">Новый отчёт</button>
     </div>
 
-    <div class="card">
+    <div v-if="state.loading" class="alert alert-info">Загрузка отчётов…</div>
+    <div v-if="state.error" class="alert alert-danger">Не удалось загрузить отчёты.</div>
+
+    <div class="card" v-if="state.data">
       <div class="card-body">
         <div class="table-responsive">
           <table class="table align-middle">
@@ -22,19 +25,12 @@
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td>Backend Node.js</td>
-                <td>Москва</td>
-                <td>Рынок роли</td>
-                <td>2026‑02‑08</td>
-                <td><span class="badge text-bg-success">Готов</span></td>
-              </tr>
-              <tr>
-                <td>Product Manager</td>
-                <td>Казань</td>
-                <td>Конкуренты</td>
-                <td>2026‑02‑07</td>
-                <td><span class="badge text-bg-warning">В работе</span></td>
+              <tr v-for="item in state.data.items" :key="item.role + item.date">
+                <td>{{ item.role }}</td>
+                <td>{{ item.region }}</td>
+                <td>{{ item.type }}</td>
+                <td>{{ item.date }}</td>
+                <td><span class="badge" :class="badgeClass(item.status)">{{ item.status }}</span></td>
               </tr>
             </tbody>
           </table>
@@ -43,3 +39,30 @@
     </div>
   </div>
 </template>
+
+<script setup lang="ts">
+import { onMounted, reactive } from 'vue';
+import { useApi } from '../../composables/useApi';
+
+const api = useApi();
+const state = reactive<{ loading: boolean; error: boolean; data: any | null }>({
+  loading: true,
+  error: false,
+  data: null
+});
+
+const badgeClass = (status: string) => {
+  if (status?.toLowerCase().includes('работ')) return 'text-bg-warning';
+  return 'text-bg-success';
+};
+
+onMounted(async () => {
+  try {
+    state.data = await api.getReports();
+  } catch {
+    state.error = true;
+  } finally {
+    state.loading = false;
+  }
+});
+</script>

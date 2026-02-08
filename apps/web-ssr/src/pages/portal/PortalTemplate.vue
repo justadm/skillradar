@@ -8,17 +8,22 @@
       <button class="btn btn-primary btn-sm">Сформировать</button>
     </div>
 
-    <div class="row g-3">
+    <div v-if="state.loading" class="alert alert-info">Генерируем шаблон…</div>
+    <div v-if="state.error" class="alert alert-danger">Не удалось получить шаблон.</div>
+
+    <div class="row g-3" v-if="state.data">
       <div class="col-lg-7">
         <div class="card h-100">
           <div class="card-body">
-            <h3 class="h6">Backend Node.js (Москва)</h3>
-            <p class="text-secondary">Уровень: Middle+ · Формат: гибрид</p>
+            <h3 class="h6">{{ state.data.role }}</h3>
+            <p class="text-secondary">Уровень: {{ state.data.level }} · Формат: {{ state.data.format }}</p>
             <h4 class="h6 mt-4">Ключевые требования</h4>
             <ul class="text-secondary">
-              <li>Node.js, TypeScript, SQL</li>
-              <li>Docker, CI/CD, REST</li>
-              <li>Опыт 3+ года</li>
+              <li v-for="item in state.data.requirements" :key="item">{{ item }}</li>
+            </ul>
+            <h4 class="h6 mt-4">Задачи</h4>
+            <ul class="text-secondary">
+              <li v-for="item in state.data.tasks" :key="item">{{ item }}</li>
             </ul>
           </div>
         </div>
@@ -27,11 +32,33 @@
         <div class="card">
           <div class="card-body">
             <h3 class="h6">Рекомендуемая вилка</h3>
-            <p class="display-6 fw-semibold">180–260k</p>
-            <p class="text-secondary">Конкурентный уровень.</p>
+            <p class="display-6 fw-semibold">{{ state.data.salary }}</p>
+            <p class="text-secondary">{{ state.data.salaryNote }}</p>
           </div>
         </div>
       </div>
     </div>
   </div>
 </template>
+
+<script setup lang="ts">
+import { onMounted, reactive } from 'vue';
+import { useApi } from '../../composables/useApi';
+
+const api = useApi();
+const state = reactive<{ loading: boolean; error: boolean; data: any | null }>({
+  loading: true,
+  error: false,
+  data: null
+});
+
+onMounted(async () => {
+  try {
+    state.data = await api.getTemplate();
+  } catch {
+    state.error = true;
+  } finally {
+    state.loading = false;
+  }
+});
+</script>

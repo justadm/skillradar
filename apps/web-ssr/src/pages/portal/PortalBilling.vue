@@ -8,26 +8,43 @@
       <button class="btn btn-outline-secondary btn-sm">История платежей</button>
     </div>
 
-    <div class="row g-3">
-      <div class="col-md-6 col-lg-4">
-        <div class="card h-100">
+    <div v-if="state.loading" class="alert alert-info">Загружаем тарифы…</div>
+    <div v-if="state.error" class="alert alert-danger">Не удалось загрузить тарифы.</div>
+
+    <div class="row g-3" v-if="state.data">
+      <div class="col-md-6 col-lg-4" v-for="plan in state.data.plans" :key="plan.name">
+        <div class="card h-100" :class="{ 'border border-primary': plan.featured }">
           <div class="card-body">
-            <h3 class="h6">Starter</h3>
-            <p class="display-6 fw-semibold">$99</p>
-            <p class="text-secondary">До 3 отчётов в месяц.</p>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-6 col-lg-4">
-        <div class="card h-100 border border-primary">
-          <div class="card-body">
-            <span class="badge text-bg-primary">Популярный</span>
-            <h3 class="h6 mt-2">Pro</h3>
-            <p class="display-6 fw-semibold">$199</p>
-            <p class="text-secondary">До 10 отчётов, экспорт CSV/PDF.</p>
+            <span v-if="plan.featured" class="badge text-bg-primary">Популярный</span>
+            <h3 class="h6" :class="{ 'mt-2': plan.featured }">{{ plan.name }}</h3>
+            <p class="display-6 fw-semibold">{{ plan.price }}</p>
+            <p class="text-secondary">{{ plan.desc }}</p>
+            <button class="btn" :class="plan.featured ? 'btn-primary' : 'btn-outline-secondary'">{{ plan.cta }}</button>
           </div>
         </div>
       </div>
     </div>
   </div>
 </template>
+
+<script setup lang="ts">
+import { onMounted, reactive } from 'vue';
+import { useApi } from '../../composables/useApi';
+
+const api = useApi();
+const state = reactive<{ loading: boolean; error: boolean; data: any | null }>({
+  loading: true,
+  error: false,
+  data: null
+});
+
+onMounted(async () => {
+  try {
+    state.data = await api.getBilling();
+  } catch {
+    state.error = true;
+  } finally {
+    state.loading = false;
+  }
+});
+</script>

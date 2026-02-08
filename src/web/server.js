@@ -152,6 +152,10 @@ function buildApiRouter() {
     res.json(readMock('competitors'));
   });
 
+  app.get(`${API_BASE}/template`, requireAuth, (req, res) => {
+    res.json(readMock('template'));
+  });
+
   app.post(`${API_BASE}/template`, requireAuth, (req, res) => {
     res.json(readMock('template'));
   });

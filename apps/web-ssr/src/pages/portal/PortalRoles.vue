@@ -8,23 +8,16 @@
       <button class="btn btn-outline-secondary btn-sm">Создать профиль</button>
     </div>
 
-    <div class="row g-3">
-      <div class="col-md-6 col-lg-4">
+    <div v-if="state.loading" class="alert alert-info">Загрузка ролей…</div>
+    <div v-if="state.error" class="alert alert-danger">Не удалось загрузить роли.</div>
+
+    <div class="row g-3" v-if="state.data">
+      <div class="col-md-6 col-lg-4" v-for="item in state.data.items" :key="item.title">
         <div class="card h-100">
           <div class="card-body">
-            <h3 class="h6">Backend Node.js</h3>
-            <p class="text-secondary">Москва · Middle+</p>
-            <p class="text-secondary">Навыки: node.js, sql, docker, rest</p>
-            <button class="btn btn-outline-secondary btn-sm">Открыть</button>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-6 col-lg-4">
-        <div class="card h-100">
-          <div class="card-body">
-            <h3 class="h6">QA Automation</h3>
-            <p class="text-secondary">СПб · Middle</p>
-            <p class="text-secondary">Навыки: python, selenium, api, ci</p>
+            <h3 class="h6">{{ item.title }}</h3>
+            <p class="text-secondary">{{ item.region }} · {{ item.level }}</p>
+            <p class="text-secondary">Навыки: {{ item.skills }}</p>
             <button class="btn btn-outline-secondary btn-sm">Открыть</button>
           </div>
         </div>
@@ -32,3 +25,25 @@
     </div>
   </div>
 </template>
+
+<script setup lang="ts">
+import { onMounted, reactive } from 'vue';
+import { useApi } from '../../composables/useApi';
+
+const api = useApi();
+const state = reactive<{ loading: boolean; error: boolean; data: any | null }>({
+  loading: true,
+  error: false,
+  data: null
+});
+
+onMounted(async () => {
+  try {
+    state.data = await api.getRoles();
+  } catch {
+    state.error = true;
+  } finally {
+    state.loading = false;
+  }
+});
+</script>

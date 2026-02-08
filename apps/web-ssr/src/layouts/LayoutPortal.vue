@@ -31,6 +31,9 @@
 
     <main class="py-4">
       <div class="container-fluid">
+        <div v-if="!isAuthed" class="alert alert-warning">
+          Демо‑режим: показываем пример данных. Для полной версии войдите.
+        </div>
         <div class="row">
           <aside class="col-lg-2 mb-3">
             <div class="list-group">
@@ -55,4 +58,7 @@
 
 <script setup lang="ts">
 import { RouterLink } from 'vue-router';
+import { useAuth } from '../composables/useAuth';
+
+const { isAuthed } = useAuth();
 </script>
