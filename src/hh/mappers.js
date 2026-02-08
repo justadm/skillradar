@@ -21,8 +21,11 @@ function criteriaToSearchParams(criteria = {}) {
   if (Array.isArray(criteria.keywords)) textParts.push(...criteria.keywords);
   const text = textParts.join(' ').trim();
 
+  const exclude = Array.isArray(criteria.exclude) ? criteria.exclude : [];
+  const excludeText = exclude.length ? exclude.map(w => `NOT ${w}`).join(' ') : '';
+
   const params = {
-    text,
+    text: [text, excludeText].filter(Boolean).join(' ').trim(),
     area: criteria.area || DEFAULT_AREA,
     experience: mapExperienceToHH(criteria.experience),
     salary_from: criteria.salary?.amount || undefined,

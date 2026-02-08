@@ -23,7 +23,8 @@ function computeMarketStats(vacancies, totalFound) {
     const req = v.snippet?.requirement || '';
     const resp = v.snippet?.responsibility || '';
     const tokens = extractKeywords(`${req} ${resp}`);
-    for (const t of tokens) {
+    const unique = new Set(tokens);
+    for (const t of unique) {
       counts.set(t, (counts.get(t) || 0) + 1);
     }
 

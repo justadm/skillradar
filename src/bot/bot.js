@@ -91,7 +91,7 @@ async function handleSearch(ctx, text) {
   const user = getOrCreateUser(tgId);
 
   console.log(`[search] tg_id=${tgId} text="${text}"`);
-  await ctx.reply('Ищу подходящие вакансии…');
+  await ctx.reply('Ищу подходящие вакансии…', { reply_markup: { remove_keyboard: true } });
 
   const criteria = await parseCriteria(text);
   saveQuery(user.id, 'search', text, criteria);
@@ -127,6 +127,7 @@ async function handleSearch(ctx, text) {
   });
 
   await ctx.reply(lines.join('\n\n'), { parse_mode: 'HTML', disable_web_page_preview: true });
+  await ctx.reply('Главное меню', mainMenu());
 }
 
 async function handleMarket(ctx, text) {
@@ -134,7 +135,7 @@ async function handleMarket(ctx, text) {
   const user = getOrCreateUser(tgId);
 
   console.log(`[market] tg_id=${tgId} text="${text}"`);
-  await ctx.reply('Собираю срез рынка…');
+  await ctx.reply('Собираю срез рынка…', { reply_markup: { remove_keyboard: true } });
 
   const cacheKey = `market:${(text || '').toLowerCase()}:${process.env.HH_AREA_DEFAULT || '113'}`;
   const cached = getMarketCache(cacheKey);
@@ -154,6 +155,7 @@ async function handleMarket(ctx, text) {
     ].filter(Boolean).join('\n');
 
     await ctx.reply(msg, { parse_mode: 'HTML' });
+    await ctx.reply('Главное меню', mainMenu());
     return;
   }
 
@@ -184,6 +186,7 @@ async function handleMarket(ctx, text) {
   ].filter(Boolean).join('\n');
 
   await ctx.reply(msg, { parse_mode: 'HTML' });
+  await ctx.reply('Главное меню', mainMenu());
 }
 
 async function handleStoplist(ctx) {
@@ -288,13 +291,11 @@ function startBot() {
       if (state === STATE.AWAIT_SEARCH) {
         setState(ctx.from.id, STATE.IDLE);
         await handleSearch(ctx, text);
-        await ctx.reply('Главное меню', mainMenu());
         return;
       }
       if (state === STATE.AWAIT_MARKET) {
         setState(ctx.from.id, STATE.IDLE);
         await handleMarket(ctx, text);
-        await ctx.reply('Главное меню', mainMenu());
         return;
       }
       if (state === STATE.STOP_ADD) {
