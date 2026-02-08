@@ -9,12 +9,28 @@ const SRPortal = (() => {
     return 'secondary';
   };
 
+  const apiMap = {
+    dashboard: 'dashboard',
+    reports: 'reports',
+    roles: 'roles',
+    competitors: 'competitors',
+    template: 'template',
+    team: 'team',
+    billing: 'billing',
+    settings: 'settings'
+  };
+
+  const getBase = () => {
+    const defaultBase = window.location.protocol.startsWith('http') ? '/api/v1' : '../data';
+    return window.SR_API_BASE || localStorage.getItem('sr-api-base') || defaultBase;
+  };
+
   const loadJson = async page => {
     try {
-      const defaultBase = '../data';
-      const base = window.SR_API_BASE || localStorage.getItem('sr-api-base') || defaultBase;
+      const base = getBase();
       const useJson = !base.includes('/api');
-      const url = useJson ? `${base}/${page}.json` : `${base}/${page}`;
+      const endpoint = apiMap[page] || page;
+      const url = useJson ? `${base}/${page}.json` : `${base}/${endpoint}`;
       const headers = { 'Content-Type': 'application/json' };
       const token = localStorage.getItem('sr-token');
       if (token && !useJson) headers.Authorization = `Bearer ${token}`;
@@ -153,14 +169,15 @@ const SRPortal = (() => {
     if (!data) return;
     const container = qs('#sr-team');
     if (!container) return;
-    container.innerHTML = data.members
+    const members = data.members || data.items || [];
+    container.innerHTML = members
       .map(
         item => `
         <div class="col-md-6 col-lg-4">
           <div class="card sr-card h-100">
             <div class="card-body">
               <h3 class="h6 mb-1">${item.name}</h3>
-              <p class="sr-muted">${item.role} · ${item.access}</p>
+              <p class="sr-muted">${item.role} · ${item.access || item.status || ''}</p>
               <button class="btn btn-outline-secondary btn-sm">Управлять</button>
             </div>
           </div>
@@ -232,8 +249,8 @@ const SRPortal = (() => {
     if (!data) {
       showState('error');
       const error = qs('[data-sr-error]');
-      if (error && localStorage.getItem('sr-token') === null && (window.SR_API_BASE || '').includes('/api')) {
-        error.textContent = 'Нужна авторизация. Откройте /login.html и войдите.';
+      if (error && localStorage.getItem('sr-token') === null && String(getBase()).includes('/api')) {
+        error.innerHTML = 'Нужна авторизация. Откройте <a href=\"/login.html\">страницу входа</a>.';
       }
       return;
     }

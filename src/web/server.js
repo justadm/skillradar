@@ -6,7 +6,17 @@ const {
   consumeAuthToken,
   createSession,
   createOrGetWebUser,
-  getSessionUser
+  getSessionUser,
+  listReports,
+  createReport,
+  getReport,
+  listRoleProfiles,
+  createRoleProfile,
+  deleteRoleProfile,
+  listTeam,
+  inviteTeamMember,
+  updateTeamRole,
+  deleteTeamMember
 } = require('../db');
 
 const WEB_PORT = process.env.WEB_PORT || 3000;
@@ -34,6 +44,23 @@ function startWebServer() {
   app.use(express.json());
   app.use(express.static(STATIC_DIR));
 
+  app.get(`${API_BASE}/dashboard`, requireAuth, (req, res) => {
+    const reports = listReports(req.user.org_id, 3, 0);
+    const data = readMock('dashboard');
+    res.json({
+      stats: data.stats,
+      reports: reports.length
+        ? reports.map(item => ({
+          role: item.role,
+          region: item.city || 'Москва',
+          date: item.created_at.slice(0, 10),
+          status: item.status === 'processing' ? 'В работе' : 'Готов'
+        }))
+        : data.reports,
+      activity: data.activity
+    });
+  });
+
   app.post(`${API_BASE}/auth/login`, (req, res) => {
     const email = String(req.body?.email || '').trim().toLowerCase();
     if (!email || !email.includes('@')) {
@@ -60,25 +87,39 @@ function startWebServer() {
   });
 
   app.get(`${API_BASE}/reports`, requireAuth, (req, res) => {
-    const data = readMock('reports');
-    res.json({ items: data.items, total: data.items.length });
+    const limit = Number(req.query.limit || 20);
+    const offset = Number(req.query.offset || 0);
+    const items = listReports(req.user.org_id, limit, offset);
+    if (!items.length) {
+      const data = readMock('reports');
+      return res.json({ items: data.items, total: data.items.length });
+    }
+    res.json({
+      items: items.map(item => ({
+        role: item.role,
+        region: item.city || 'Москва',
+        type: item.type === 'competitors' ? 'Конкуренты' : item.type === 'template' ? 'Шаблон вакансии' : 'Рынок роли',
+        date: item.created_at.slice(0, 10),
+        status: item.status === 'processing' ? 'В работе' : 'Готов'
+      })),
+      total: items.length
+    });
   });
 
   app.post(`${API_BASE}/reports`, requireAuth, (req, res) => {
-    const id = `rep_${Date.now()}`;
-    res.json({ id, status: 'processing' });
+    if (!req.body?.role) {
+      return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Role is required', details: { field: 'role' } } });
+    }
+    const report = createReport(req.user.org_id, req.body);
+    res.json({ id: report.id, status: report.status });
   });
 
   app.get(`${API_BASE}/reports/:id`, requireAuth, (req, res) => {
-    const data = readMock('dashboard');
-    res.json({
-      id: req.params.id,
-      type: 'market',
-      role: 'Backend Node.js',
-      city: 'Москва',
-      status: 'ready',
-      stats: data.stats
-    });
+    const report = getReport(req.user.org_id, req.params.id);
+    if (!report) {
+      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Report not found' } });
+    }
+    res.json(report);
   });
 
   app.get(`${API_BASE}/reports/:id/export`, requireAuth, (req, res) => {
@@ -86,14 +127,26 @@ function startWebServer() {
   });
 
   app.get(`${API_BASE}/roles`, requireAuth, (req, res) => {
-    res.json(readMock('roles'));
+    const items = listRoleProfiles(req.user.org_id);
+    if (!items.length) return res.json(readMock('roles'));
+    res.json({ items: items.map(item => ({
+      title: item.role,
+      region: item.city || 'Москва',
+      level: item.level || 'Middle',
+      skills: (item.skills || []).join(', ')
+    }))});
   });
 
   app.post(`${API_BASE}/roles`, requireAuth, (req, res) => {
-    res.json({ id: `role_${Date.now()}`, ...req.body });
+    if (!req.body?.role) {
+      return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Role is required', details: { field: 'role' } } });
+    }
+    const role = createRoleProfile(req.user.org_id, req.body, req.user.id);
+    res.json(role);
   });
 
   app.delete(`${API_BASE}/roles/:id`, requireAuth, (req, res) => {
+    deleteRoleProfile(req.user.org_id, req.params.id);
     res.json({ status: 'deleted' });
   });
 
@@ -106,23 +159,45 @@ function startWebServer() {
   });
 
   app.get(`${API_BASE}/team`, requireAuth, (req, res) => {
-    res.json(readMock('team'));
+    const items = listTeam(req.user.org_id);
+    res.json({ members: items.map(user => ({
+      name: user.name || user.email,
+      role: user.role,
+      access: user.status === 'invited' ? 'Invitation pending' : 'Active'
+    }))});
   });
 
   app.post(`${API_BASE}/team/invite`, requireAuth, (req, res) => {
-    res.json({ status: 'invited', ...req.body });
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const role = req.body?.role || 'analyst';
+    if (!email || !email.includes('@')) {
+      return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid email', details: { field: 'email' } } });
+    }
+    const user = inviteTeamMember(req.user.org_id, email, role);
+    res.json({ status: 'invited', user });
   });
 
   app.patch(`${API_BASE}/team/:id`, requireAuth, (req, res) => {
-    res.json({ status: 'updated', id: req.params.id, ...req.body });
+    const role = req.body?.role;
+    const user = updateTeamRole(req.user.org_id, req.params.id, role);
+    res.json({ status: 'updated', user });
   });
 
   app.delete(`${API_BASE}/team/:id`, requireAuth, (req, res) => {
+    deleteTeamMember(req.user.org_id, req.params.id);
     res.json({ status: 'deleted' });
   });
 
   app.get(`${API_BASE}/billing/plan`, requireAuth, (req, res) => {
     res.json(readMock('billing'));
+  });
+
+  app.get(`${API_BASE}/billing`, requireAuth, (req, res) => {
+    res.json(readMock('billing'));
+  });
+
+  app.get(`${API_BASE}/settings`, requireAuth, (req, res) => {
+    res.json(readMock('settings'));
   });
 
   app.post(`${API_BASE}/billing/checkout`, requireAuth, (req, res) => {

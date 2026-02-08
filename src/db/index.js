@@ -72,6 +72,39 @@ function initDb() {
       expires_at TEXT NOT NULL,
       created_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS reports (
+      id TEXT PRIMARY KEY,
+      org_id TEXT NOT NULL,
+      type TEXT NOT NULL,
+      role TEXT NOT NULL,
+      level TEXT,
+      city TEXT,
+      schedule TEXT,
+      employment TEXT,
+      salary_min INTEGER,
+      salary_max INTEGER,
+      currency TEXT,
+      stats_json TEXT,
+      status TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS role_profiles (
+      id TEXT PRIMARY KEY,
+      org_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      role TEXT NOT NULL,
+      level TEXT,
+      city TEXT,
+      skills_json TEXT,
+      schedule TEXT,
+      employment TEXT,
+      salary_min INTEGER,
+      salary_max INTEGER,
+      created_by TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
   `);
 
   ensureColumn('users', 'mode', 'TEXT', 'jobseeker');
@@ -203,7 +236,12 @@ function ensureDefaultOrg() {
 function createOrGetWebUser(email) {
   const db = getDb();
   const existing = db.prepare('SELECT * FROM web_users WHERE email = ?').get(email.toLowerCase());
-  if (existing) return existing;
+  if (existing) {
+    if (existing.status !== 'active') {
+      db.prepare('UPDATE web_users SET status = ? WHERE id = ?').run('active', existing.id);
+    }
+    return db.prepare('SELECT * FROM web_users WHERE id = ?').get(existing.id);
+  }
   const orgId = ensureDefaultOrg();
   const count = db.prepare('SELECT COUNT(*) as cnt FROM web_users').get().cnt;
   const role = count === 0 ? 'owner' : 'analyst';
@@ -235,6 +273,21 @@ function getWebUserById(userId) {
   return db.prepare('SELECT * FROM web_users WHERE id = ?').get(userId);
 }
 
+function listReports(orgId, limit = 20, offset = 0) {
+  const db = getDb();
+  return db.prepare('SELECT * FROM reports WHERE org_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?')
+    .all(orgId, limit, offset)
+    .map(row => ({ ...row, stats: row.stats_json ? JSON.parse(row.stats_json) : null }));
+}
+
+function createReport(orgId, payload) {
+  const db = getDb();
+  const id = `rep_${Date.now()}`;
+  const now = new Date().toISOString();
+  db.prepare(`INSERT INTO reports
+    (id, org_id, type, role, level, city, schedule, employment, salary_min, salary_max, currency, stats_json, status, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)\n    .run(\n      id,\n      orgId,\n      payload.type || 'market',\n      payload.role,\n      payload.level || null,\n      payload.city || null,\n      payload.schedule || null,\n      payload.employment || null,\n      payload.salary_min || null,\n      payload.salary_max || null,\n      payload.currency || 'RUR',\n      payload.stats ? JSON.stringify(payload.stats) : null,\n      payload.status || 'processing',\n      now,\n      now\n    );\n  return getReport(orgId, id);\n}\n\nfunction getReport(orgId, id) {\n  const db = getDb();\n  const row = db.prepare('SELECT * FROM reports WHERE id = ? AND org_id = ?').get(id, orgId);\n  if (!row) return null;\n  return { ...row, stats: row.stats_json ? JSON.parse(row.stats_json) : null };\n}\n\nfunction listRoleProfiles(orgId) {\n  const db = getDb();\n  return db.prepare('SELECT * FROM role_profiles WHERE org_id = ? ORDER BY updated_at DESC').all(orgId)\n    .map(row => ({ ...row, skills: row.skills_json ? JSON.parse(row.skills_json) : [] }));\n}\n\nfunction createRoleProfile(orgId, payload, createdBy) {\n  const db = getDb();\n  const id = `role_${Date.now()}`;\n  const now = new Date().toISOString();\n  db.prepare(`INSERT INTO role_profiles\n    (id, org_id, name, role, level, city, skills_json, schedule, employment, salary_min, salary_max, created_by, created_at, updated_at)\n    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)\n    .run(\n      id,\n      orgId,\n      payload.name || payload.role,\n      payload.role,\n      payload.level || null,\n      payload.city || null,\n      payload.skills ? JSON.stringify(payload.skills) : JSON.stringify([]),\n      payload.schedule || null,\n      payload.employment || null,\n      payload.salary_min || null,\n      payload.salary_max || null,\n      createdBy || null,\n      now,\n      now\n    );\n  return db.prepare('SELECT * FROM role_profiles WHERE id = ?').get(id);\n}\n\nfunction deleteRoleProfile(orgId, id) {\n  const db = getDb();\n  db.prepare('DELETE FROM role_profiles WHERE id = ? AND org_id = ?').run(id, orgId);\n  return true;\n}\n\nfunction listTeam(orgId) {\n  const db = getDb();\n  return db.prepare('SELECT * FROM web_users WHERE org_id = ? AND status != ? ORDER BY created_at ASC')\n    .all(orgId, 'deleted');\n}\n\nfunction inviteTeamMember(orgId, email, role = 'analyst') {\n  const db = getDb();\n  const existing = db.prepare('SELECT * FROM web_users WHERE email = ?').get(email.toLowerCase());\n  if (existing) return existing;\n  const id = require('crypto').randomUUID();\n  db.prepare('INSERT INTO web_users (id, email, name, role, org_id, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')\n    .run(id, email.toLowerCase(), email.split('@')[0], role, orgId, 'invited', new Date().toISOString());\n  return db.prepare('SELECT * FROM web_users WHERE id = ?').get(id);\n}\n\nfunction updateTeamRole(orgId, userId, role) {\n  const db = getDb();\n  db.prepare('UPDATE web_users SET role = ? WHERE id = ? AND org_id = ?').run(role, userId, orgId);\n  return db.prepare('SELECT * FROM web_users WHERE id = ?').get(userId);\n}\n\nfunction deleteTeamMember(orgId, userId) {\n  const db = getDb();\n  db.prepare('UPDATE web_users SET status = ? WHERE id = ? AND org_id = ?').run('deleted', userId, orgId);\n  return true;\n}\n*** End Patch"}}
+
 module.exports = {
   initDb,
   getDb,
@@ -257,5 +310,15 @@ module.exports = {
   createSession,
   getSessionUser,
   createOrGetWebUser,
-  getWebUserById
+  getWebUserById,
+  listReports,
+  createReport,
+  getReport,
+  listRoleProfiles,
+  createRoleProfile,
+  deleteRoleProfile,
+  listTeam,
+  inviteTeamMember,
+  updateTeamRole,
+  deleteTeamMember
 };
