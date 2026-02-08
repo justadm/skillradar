@@ -5,8 +5,37 @@
         <h1 class="h3 mb-1">Команда</h1>
         <p class="text-secondary mb-0">Участники и роли.</p>
       </div>
-      <button class="btn btn-primary btn-sm">Пригласить</button>
+      <button class="btn btn-primary btn-sm" :disabled="!isAuthed" @click="toggleForm">Пригласить</button>
     </div>
+
+    <div v-if="!isAuthed" class="alert alert-secondary">
+      Демо‑режим: приглашения доступны после входа.
+    </div>
+
+    <form v-if="showForm" class="card mb-3" @submit.prevent="submit">
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Email</label>
+            <input v-model="form.email" class="form-control" placeholder="user@company.com" required />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Роль</label>
+            <select v-model="form.role" class="form-select">
+              <option value="owner">Owner</option>
+              <option value="admin">Admin</option>
+              <option value="analyst">Analyst</option>
+              <option value="viewer">Viewer</option>
+            </select>
+          </div>
+        </div>
+        <div class="mt-3 d-flex gap-2">
+          <button class="btn btn-primary btn-sm" type="submit">Отправить</button>
+          <button class="btn btn-outline-secondary btn-sm" type="button" @click="toggleForm">Отмена</button>
+        </div>
+        <div v-if="formMessage" class="alert alert-info mt-3">{{ formMessage }}</div>
+      </div>
+    </form>
 
     <div v-if="state.loading" class="alert alert-info">Загружаем команду…</div>
     <div v-if="state.error" class="alert alert-danger">Не удалось загрузить команду.</div>
@@ -25,15 +54,20 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive } from 'vue';
+import { onMounted, reactive, ref } from 'vue';
 import { useApi } from '../../composables/useApi';
+import { useAuth } from '../../composables/useAuth';
 
 const api = useApi();
+const { isAuthed } = useAuth();
 const state = reactive<{ loading: boolean; error: boolean; data: any | null }>({
   loading: true,
   error: false,
   data: null
 });
+const showForm = ref(false);
+const formMessage = ref('');
+const form = reactive({ email: '', role: 'analyst' });
 
 onMounted(async () => {
   try {
@@ -44,4 +78,19 @@ onMounted(async () => {
     state.loading = false;
   }
 });
+
+const toggleForm = () => {
+  showForm.value = !showForm.value;
+  formMessage.value = '';
+};
+
+const submit = async () => {
+  try {
+    await api.inviteTeam(form);
+    formMessage.value = 'Приглашение отправлено.';
+    showForm.value = false;
+  } catch {
+    formMessage.value = 'Не удалось отправить приглашение.';
+  }
+};
 </script>
