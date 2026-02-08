@@ -4,6 +4,7 @@ node_modules
 /data/*.log
 /data/
 /bot.log
+/ssr.log
 /.npm-cache/
 package-lock.json
 /dist/

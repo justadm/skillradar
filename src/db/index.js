@@ -286,7 +286,97 @@ function createReport(orgId, payload) {
   const now = new Date().toISOString();
   db.prepare(`INSERT INTO reports
     (id, org_id, type, role, level, city, schedule, employment, salary_min, salary_max, currency, stats_json, status, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)\n    .run(\n      id,\n      orgId,\n      payload.type || 'market',\n      payload.role,\n      payload.level || null,\n      payload.city || null,\n      payload.schedule || null,\n      payload.employment || null,\n      payload.salary_min || null,\n      payload.salary_max || null,\n      payload.currency || 'RUR',\n      payload.stats ? JSON.stringify(payload.stats) : null,\n      payload.status || 'processing',\n      now,\n      now\n    );\n  return getReport(orgId, id);\n}\n\nfunction getReport(orgId, id) {\n  const db = getDb();\n  const row = db.prepare('SELECT * FROM reports WHERE id = ? AND org_id = ?').get(id, orgId);\n  if (!row) return null;\n  return { ...row, stats: row.stats_json ? JSON.parse(row.stats_json) : null };\n}\n\nfunction listRoleProfiles(orgId) {\n  const db = getDb();\n  return db.prepare('SELECT * FROM role_profiles WHERE org_id = ? ORDER BY updated_at DESC').all(orgId)\n    .map(row => ({ ...row, skills: row.skills_json ? JSON.parse(row.skills_json) : [] }));\n}\n\nfunction createRoleProfile(orgId, payload, createdBy) {\n  const db = getDb();\n  const id = `role_${Date.now()}`;\n  const now = new Date().toISOString();\n  db.prepare(`INSERT INTO role_profiles\n    (id, org_id, name, role, level, city, skills_json, schedule, employment, salary_min, salary_max, created_by, created_at, updated_at)\n    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)\n    .run(\n      id,\n      orgId,\n      payload.name || payload.role,\n      payload.role,\n      payload.level || null,\n      payload.city || null,\n      payload.skills ? JSON.stringify(payload.skills) : JSON.stringify([]),\n      payload.schedule || null,\n      payload.employment || null,\n      payload.salary_min || null,\n      payload.salary_max || null,\n      createdBy || null,\n      now,\n      now\n    );\n  return db.prepare('SELECT * FROM role_profiles WHERE id = ?').get(id);\n}\n\nfunction deleteRoleProfile(orgId, id) {\n  const db = getDb();\n  db.prepare('DELETE FROM role_profiles WHERE id = ? AND org_id = ?').run(id, orgId);\n  return true;\n}\n\nfunction listTeam(orgId) {\n  const db = getDb();\n  return db.prepare('SELECT * FROM web_users WHERE org_id = ? AND status != ? ORDER BY created_at ASC')\n    .all(orgId, 'deleted');\n}\n\nfunction inviteTeamMember(orgId, email, role = 'analyst') {\n  const db = getDb();\n  const existing = db.prepare('SELECT * FROM web_users WHERE email = ?').get(email.toLowerCase());\n  if (existing) return existing;\n  const id = require('crypto').randomUUID();\n  db.prepare('INSERT INTO web_users (id, email, name, role, org_id, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')\n    .run(id, email.toLowerCase(), email.split('@')[0], role, orgId, 'invited', new Date().toISOString());\n  return db.prepare('SELECT * FROM web_users WHERE id = ?').get(id);\n}\n\nfunction updateTeamRole(orgId, userId, role) {\n  const db = getDb();\n  db.prepare('UPDATE web_users SET role = ? WHERE id = ? AND org_id = ?').run(role, userId, orgId);\n  return db.prepare('SELECT * FROM web_users WHERE id = ?').get(userId);\n}\n\nfunction deleteTeamMember(orgId, userId) {\n  const db = getDb();\n  db.prepare('UPDATE web_users SET status = ? WHERE id = ? AND org_id = ?').run('deleted', userId, orgId);\n  return true;\n}\n*** End Patch"}}
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)    .run(
+      id,
+      orgId,
+      payload.type || 'market',
+      payload.role,
+      payload.level || null,
+      payload.city || null,
+      payload.schedule || null,
+      payload.employment || null,
+      payload.salary_min || null,
+      payload.salary_max || null,
+      payload.currency || 'RUR',
+      payload.stats ? JSON.stringify(payload.stats) : null,
+      payload.status || 'processing',
+      now,
+      now
+    );
+  return getReport(orgId, id);
+}
+
+function getReport(orgId, id) {
+  const db = getDb();
+  const row = db.prepare('SELECT * FROM reports WHERE id = ? AND org_id = ?').get(id, orgId);
+  if (!row) return null;
+  return { ...row, stats: row.stats_json ? JSON.parse(row.stats_json) : null };
+}
+
+function listRoleProfiles(orgId) {
+  const db = getDb();
+  return db.prepare('SELECT * FROM role_profiles WHERE org_id = ? ORDER BY updated_at DESC').all(orgId)
+    .map(row => ({ ...row, skills: row.skills_json ? JSON.parse(row.skills_json) : [] }));
+}
+
+function createRoleProfile(orgId, payload, createdBy) {
+  const db = getDb();
+  const id = `role_${Date.now()}`;
+  const now = new Date().toISOString();
+  db.prepare(`INSERT INTO role_profiles
+    (id, org_id, name, role, level, city, skills_json, schedule, employment, salary_min, salary_max, created_by, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)    .run(
+      id,
+      orgId,
+      payload.name || payload.role,
+      payload.role,
+      payload.level || null,
+      payload.city || null,
+      payload.skills ? JSON.stringify(payload.skills) : JSON.stringify([]),
+      payload.schedule || null,
+      payload.employment || null,
+      payload.salary_min || null,
+      payload.salary_max || null,
+      createdBy || null,
+      now,
+      now
+    );
+  return db.prepare('SELECT * FROM role_profiles WHERE id = ?').get(id);
+}
+
+function deleteRoleProfile(orgId, id) {
+  const db = getDb();
+  db.prepare('DELETE FROM role_profiles WHERE id = ? AND org_id = ?').run(id, orgId);
+  return true;
+}
+
+function listTeam(orgId) {
+  const db = getDb();
+  return db.prepare('SELECT * FROM web_users WHERE org_id = ? AND status != ? ORDER BY created_at ASC')
+    .all(orgId, 'deleted');
+}
+
+function inviteTeamMember(orgId, email, role = 'analyst') {
+  const db = getDb();
+  const existing = db.prepare('SELECT * FROM web_users WHERE email = ?').get(email.toLowerCase());
+  if (existing) return existing;
+  const id = require('crypto').randomUUID();
+  db.prepare('INSERT INTO web_users (id, email, name, role, org_id, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run(id, email.toLowerCase(), email.split('@')[0], role, orgId, 'invited', new Date().toISOString());
+  return db.prepare('SELECT * FROM web_users WHERE id = ?').get(id);
+}
+
+function updateTeamRole(orgId, userId, role) {
+  const db = getDb();
+  db.prepare('UPDATE web_users SET role = ? WHERE id = ? AND org_id = ?').run(role, userId, orgId);
+  return db.prepare('SELECT * FROM web_users WHERE id = ?').get(userId);
+}
+
+function deleteTeamMember(orgId, userId) {
+  const db = getDb();
+  db.prepare('UPDATE web_users SET status = ? WHERE id = ? AND org_id = ?').run('deleted', userId, orgId);
+  return true;
+}
 
 module.exports = {
   initDb,

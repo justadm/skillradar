@@ -293,7 +293,7 @@ API (dev):
 
 ## 16. Web SSR (Vue + Vite + NestJS)
 
-SSR сервер (единый процесс + API):
+SSR сервер (единый процесс + API, порт по умолчанию: `3001`):
 ```bash
 npm run dev:ssr
 ```

@@ -25,7 +25,11 @@ async function bootstrap() {
   if (!isProd) {
     vite = await createViteServer({
       root,
-      server: { middlewareMode: true, allowedHosts: ['sbdb.loc', 'localhost', '127.0.0.1'] },
+      server: {
+        middlewareMode: true,
+        allowedHosts: true,
+        host: true
+      },
       appType: 'custom'
     });
     server.use(vite.middlewares);
