@@ -23,17 +23,6 @@ body {
   color: var(--sr-text);
 }
 
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background:
-    radial-gradient(900px 420px at 10% -10%, rgba(45, 212, 191, 0.18), transparent),
-    radial-gradient(900px 420px at 90% 0%, rgba(96, 165, 250, 0.2), transparent),
-    linear-gradient(180deg, var(--sr-bg) 0%, var(--sr-bg-2) 100%);
-}
-
 .sr-sidebar {
   min-height: 100vh;
   border-right: 1px solid var(--sr-border);
