@@ -288,3 +288,21 @@ open /Users/just/Sites/sbdb.loc/web/login.html
 API (dev):
 - `POST /api/v1/auth/login` → вернёт `debug_token` в non‑prod
 - `POST /api/v1/auth/verify` → выдаст `Bearer` токен
+
+---
+
+## 16. Web SSR (Vue + Vite + NestJS)
+
+SSR сервер (единый процесс + API):
+```bash
+npm run dev:ssr
+```
+
+Сборка SSR:
+```bash
+npm run build:ssr
+npm run start:ssr
+```
+
+Код SSR фронта:
+- `/Users/just/Sites/sbdb.loc/apps/web-ssr`

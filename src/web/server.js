@@ -39,10 +39,8 @@ function requireAuth(req, res, next) {
   next();
 }
 
-function startWebServer() {
-  const app = express();
-  app.use(express.json());
-  app.use(express.static(STATIC_DIR));
+function buildApiRouter() {
+  const app = express.Router();
 
   app.get(`${API_BASE}/dashboard`, requireAuth, (req, res) => {
     const reports = listReports(req.user.org_id, 3, 0);
@@ -208,9 +206,17 @@ function startWebServer() {
     res.json({ status: 'ok' });
   });
 
+  return app;
+}
+
+function startWebServer() {
+  const app = express();
+  app.use(express.json());
+  app.use(buildApiRouter());
+  app.use(express.static(STATIC_DIR));
   app.listen(WEB_PORT, () => {
     console.log(`[web] listening on http://localhost:${WEB_PORT}`);
   });
 }
 
-module.exports = { startWebServer };
+module.exports = { startWebServer, buildApiRouter };
