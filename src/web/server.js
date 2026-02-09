@@ -2,6 +2,7 @@ const path = require('path');
 const fs = require('fs');
 const express = require('express');
 const PDFDocument = require('pdfkit');
+const nodemailer = require('nodemailer');
 const {
   createAuthToken,
   consumeAuthToken,
@@ -61,6 +62,57 @@ function buildReportPdf(report) {
   });
 }
 
+async function notifyLead(lead) {
+  const tgToken = process.env.LEAD_TG_BOT_TOKEN;
+  const tgChat = process.env.LEAD_TG_CHAT_ID;
+  const emailTo = process.env.LEAD_EMAIL_TO;
+
+  const message = [
+    'Новая заявка SkillRadar',
+    `Email: ${lead.email}`,
+    lead.company ? `Компания: ${lead.company}` : null,
+    lead.message ? `Комментарий: ${lead.message}` : null,
+    `Источник: ${lead.source}`
+  ].filter(Boolean).join('\n');
+
+  if (tgToken && tgChat) {
+    try {
+      await fetch(`https://api.telegram.org/bot${tgToken}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: tgChat, text: message })
+      });
+    } catch (err) {
+      console.error('[leads] telegram notify failed', err);
+    }
+  }
+
+  const smtpUrl = process.env.SMTP_URL;
+  const smtpHost = process.env.SMTP_HOST;
+  if (emailTo && (smtpUrl || smtpHost)) {
+    try {
+      const transport = smtpUrl
+        ? nodemailer.createTransport(smtpUrl)
+        : nodemailer.createTransport({
+          host: smtpHost,
+          port: Number(process.env.SMTP_PORT || 587),
+          secure: String(process.env.SMTP_SECURE || 'false') === 'true',
+          auth: process.env.SMTP_USER
+            ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+            : undefined
+        });
+      await transport.sendMail({
+        from: process.env.SMTP_FROM || 'SkillRadar <no-reply@skillradar.ai>',
+        to: emailTo,
+        subject: 'Новая заявка SkillRadar',
+        text: message
+      });
+    } catch (err) {
+      console.error('[leads] email notify failed', err);
+    }
+  }
+}
+
 function requireAuth(req, res, next) {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : null;
@@ -116,7 +168,7 @@ function buildApiRouter() {
     res.json({ user: req.user });
   });
 
-  app.post(`${API_BASE}/leads`, (req, res) => {
+  app.post(`${API_BASE}/leads`, async (req, res) => {
     const email = String(req.body?.email || '').trim().toLowerCase();
     if (!email || !email.includes('@')) {
       return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid email', details: { field: 'email' } } });
@@ -127,6 +179,7 @@ function buildApiRouter() {
       message: String(req.body?.message || '').trim(),
       source: String(req.body?.source || 'web').trim()
     });
+    await notifyLead(lead);
     res.json({ status: 'ok', lead });
   });
 
