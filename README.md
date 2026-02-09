@@ -243,6 +243,19 @@ docker compose up -d --build
 docker build -f Dockerfile.runtime -t skillradar-runtime .
 ```
 
+### Docker env шаблон
+Для контейнеров используйте:
+```bash
+cp .env.docker.example .env
+```
+
+### Логи контейнеров (logrotate)
+Есть шаблон `deploy/docker-logs.conf`. Установить на сервере:
+```bash
+sudo cp deploy/docker-logs.conf /etc/logrotate.d/skillradar-docker
+sudo logrotate -f /etc/logrotate.d/skillradar-docker
+```
+
 ---
 
 ## 13. Тест‑сценарии
