@@ -144,6 +144,68 @@ async function notifyLead(lead) {
   }
 }
 
+async function notifyOps(event, lines = [], url) {
+  const tgToken = process.env.OPS_TG_BOT_TOKEN;
+  const tgChat = process.env.OPS_TG_CHAT_ID;
+  const emailTo = process.env.OPS_EMAIL_TO;
+
+  const escapeHtml = (value) => String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+
+  const textLines = [event, ...lines].filter(Boolean);
+  const message = textLines.map(line => escapeHtml(line)).join('\n');
+
+  if (tgToken && tgChat) {
+    try {
+      const buttons = [];
+      if (url) {
+        buttons.push([{ text: 'Открыть ЛК', url }]);
+      }
+      await fetch(`https://api.telegram.org/bot${tgToken}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: tgChat,
+          text: message,
+          parse_mode: 'HTML',
+          reply_markup: buttons.length ? { inline_keyboard: buttons } : undefined
+        })
+      });
+    } catch (err) {
+      console.error('[ops] telegram notify failed', err);
+    }
+  }
+
+  const smtpUrl = process.env.SMTP_URL;
+  const smtpHost = process.env.SMTP_HOST;
+  if (emailTo && (smtpUrl || smtpHost)) {
+    try {
+      const transport = smtpUrl
+        ? nodemailer.createTransport(smtpUrl)
+        : nodemailer.createTransport({
+          host: smtpHost,
+          port: Number(process.env.SMTP_PORT || 587),
+          secure: String(process.env.SMTP_SECURE || 'false') === 'true',
+          auth: process.env.SMTP_USER
+            ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+            : undefined
+        });
+      await transport.sendMail({
+        from: process.env.SMTP_FROM || 'SkillRadar <no-reply@skillradar.ai>',
+        to: emailTo,
+        subject: `SkillRadar: ${event}`,
+        text: textLines.join('\n')
+      });
+    } catch (err) {
+      console.error('[ops] email notify failed', err);
+    }
+  }
+}
+
 function requireAuth(req, res, next) {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : null;
@@ -258,6 +320,11 @@ function buildApiRouter() {
   app.patch(`${API_BASE}/leads/:id`, requireAuth, requireRole('admin'), (req, res) => {
     const lead = updateLead(req.params.id, { status: req.body?.status, note: req.body?.note });
     addAuditLog(req.user.id, 'lead.update', String(req.params.id), { status: req.body?.status, note: req.body?.note });
+    notifyOps('Обновлён лид', [
+      `ID: ${req.params.id}`,
+      req.body?.status ? `Статус: ${req.body.status}` : null,
+      req.body?.note ? `Заметка: ${req.body.note}` : null
+    ].filter(Boolean), `${process.env.APP_URL?.replace(/\/$/, '') || ''}/portal/leads`);
     res.json({ status: 'updated', lead });
   });
 
@@ -302,6 +369,11 @@ function buildApiRouter() {
     }
     const report = createReport(req.user.org_id, req.body);
     addAuditLog(req.user.id, 'report.create', report.id, { role: report.role, type: report.type });
+    notifyOps('Создан отчёт', [
+      `ID: ${report.id}`,
+      `Роль: ${report.role}`,
+      `Тип: ${report.type}`
+    ], `${process.env.APP_URL?.replace(/\/$/, '') || ''}/portal/reports`);
     res.json({ id: report.id, status: report.status });
   });
 
@@ -353,12 +425,20 @@ function buildApiRouter() {
     }
     const role = createRoleProfile(req.user.org_id, req.body, req.user.id);
     addAuditLog(req.user.id, 'role.create', role.id, { role: role.role });
+    notifyOps('Создан профиль роли', [
+      `ID: ${role.id}`,
+      `Роль: ${role.role}`,
+      role.city ? `Город: ${role.city}` : null
+    ].filter(Boolean), `${process.env.APP_URL?.replace(/\/$/, '') || ''}/portal/roles`);
     res.json(role);
   });
 
   app.delete(`${API_BASE}/roles/:id`, requireAuth, requireRole('admin'), (req, res) => {
     deleteRoleProfile(req.user.org_id, req.params.id);
     addAuditLog(req.user.id, 'role.delete', req.params.id, {});
+    notifyOps('Удалён профиль роли', [
+      `ID: ${req.params.id}`
+    ], `${process.env.APP_URL?.replace(/\/$/, '') || ''}/portal/roles`);
     res.json({ status: 'deleted' });
   });
 
@@ -369,6 +449,10 @@ function buildApiRouter() {
     }
     deleteReport(req.user.org_id, req.params.id);
     addAuditLog(req.user.id, 'report.delete', req.params.id, {});
+    notifyOps('Удалён отчёт', [
+      `ID: ${req.params.id}`,
+      `Роль: ${report.role}`
+    ], `${process.env.APP_URL?.replace(/\/$/, '') || ''}/portal/reports`);
     res.json({ status: 'deleted' });
   });
 
@@ -426,6 +510,10 @@ function buildApiRouter() {
     }
     const user = inviteTeamMember(req.user.org_id, email, role);
     addAuditLog(req.user.id, 'team.invite', user.id, { email, role });
+    notifyOps('Приглашение в команду', [
+      `Email: ${email}`,
+      `Роль: ${role}`
+    ], `${process.env.APP_URL?.replace(/\/$/, '') || ''}/portal/team`);
     res.json({ status: 'invited', user });
   });
 
@@ -433,12 +521,19 @@ function buildApiRouter() {
     const role = req.body?.role;
     const user = updateTeamRole(req.user.org_id, req.params.id, role);
     addAuditLog(req.user.id, 'team.role.update', req.params.id, { role });
+    notifyOps('Обновлена роль в команде', [
+      `User ID: ${req.params.id}`,
+      `Новая роль: ${role}`
+    ], `${process.env.APP_URL?.replace(/\/$/, '') || ''}/portal/team`);
     res.json({ status: 'updated', user });
   });
 
   app.delete(`${API_BASE}/team/:id`, requireAuth, requireRole('admin'), (req, res) => {
     deleteTeamMember(req.user.org_id, req.params.id);
     addAuditLog(req.user.id, 'team.delete', req.params.id, {});
+    notifyOps('Удалён участник команды', [
+      `User ID: ${req.params.id}`
+    ], `${process.env.APP_URL?.replace(/\/$/, '') || ''}/portal/team`);
     res.json({ status: 'deleted' });
   });
 
@@ -456,6 +551,10 @@ function buildApiRouter() {
 
   app.post(`${API_BASE}/billing/checkout`, requireAuth, requireRole('owner'), (req, res) => {
     addAuditLog(req.user.id, 'billing.checkout', req.user.org_id, { plan: req.body?.plan || 'unknown' });
+    notifyOps('Запуск оплаты', [
+      `План: ${req.body?.plan || 'unknown'}`,
+      `Org: ${req.user.org_id}`
+    ], `${process.env.APP_URL?.replace(/\/$/, '') || ''}/portal/billing`);
     res.json({ url: 'https://example.com/checkout' });
   });
 

@@ -44,6 +44,9 @@
 
     <div class="card" v-if="state.data && canViewLeads">
       <div class="card-body">
+        <div v-if="!state.total && !state.loading" class="alert alert-secondary">
+          Нет заявок по текущим фильтрам. Попробуйте изменить запрос или сбросить фильтры.
+        </div>
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
           <div class="text-secondary small">Найдено: {{ state.total }}</div>
           <div class="d-flex align-items-center gap-2">
@@ -56,7 +59,7 @@
           </div>
         </div>
         <div class="table-responsive">
-          <table class="table align-middle">
+          <table class="table align-middle" v-if="state.total">
             <thead>
               <tr>
                 <th>ID</th>
