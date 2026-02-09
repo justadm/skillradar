@@ -78,7 +78,7 @@
     <div class="card" v-if="state.data">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-          <div class="text-secondary small">Найдено: {{ filteredMembers.length }}</div>
+          <div class="text-secondary small">Найдено: {{ state.total }}</div>
           <div class="d-flex align-items-center gap-2">
             <label class="text-secondary small">На странице</label>
             <select v-model.number="pageSize" class="form-select form-select-sm" style="width: auto;">
@@ -100,7 +100,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="member in pagedMembers" :key="member.id || member.email">
+              <tr v-for="member in state.data.members" :key="member.id || member.email">
                 <td>{{ member.name }}</td>
                 <td>{{ member.email || '—' }}</td>
                 <td>
@@ -165,10 +165,11 @@ import { pushToast } from '../../composables/useToast';
 const api = useApi();
 const { isAuthed } = useAuth();
 const { canManageTeam } = useAccess();
-const state = reactive<{ loading: boolean; error: boolean; data: any | null }>({
+const state = reactive<{ loading: boolean; error: boolean; data: any | null; total: number }>({
   loading: true,
   error: false,
-  data: null
+  data: null,
+  total: 0
 });
 const showForm = ref(false);
 const formMessage = ref('');
@@ -184,7 +185,15 @@ const route = useRoute();
 const loadTeam = async () => {
   try {
     state.loading = true;
-    state.data = await api.getTeam();
+    const res = await api.getTeam({
+      q: filters.query || undefined,
+      role: filters.role || undefined,
+      status: filters.status || undefined,
+      limit: pageSize.value,
+      offset: (page.value - 1) * pageSize.value
+    });
+    state.data = res;
+    state.total = res?.total ?? res?.members?.length ?? 0;
   } catch {
     state.error = true;
   } finally {
@@ -192,34 +201,17 @@ const loadTeam = async () => {
   }
 };
 
-onMounted(loadTeam);
 onMounted(() => {
   const q = route.query;
   if (typeof q.q === 'string') filters.query = q.q;
   if (typeof q.role === 'string') filters.role = q.role;
   if (typeof q.status === 'string') filters.status = q.status;
   if (typeof q.page === 'string') page.value = Number(q.page) || 1;
+  if (typeof q.size === 'string') pageSize.value = Number(q.size) || 10;
+  loadTeam();
 });
 
-const filteredMembers = computed(() => {
-  if (!state.data?.members) return [];
-  return state.data.members.filter((member: any) => {
-    const q = filters.query.toLowerCase();
-    const name = String(member.name || '').toLowerCase();
-    const email = String(member.email || '').toLowerCase();
-    const queryOk = !q || name.includes(q) || email.includes(q);
-    const roleOk = !filters.role || String(member.role || '').toLowerCase() === filters.role;
-    const status = String(member.access || '').toLowerCase().includes('invitation') ? 'invited' : 'active';
-    const statusOk = !filters.status || status === filters.status;
-    return queryOk && roleOk && statusOk;
-  });
-});
-
-const totalPages = computed(() => Math.max(1, Math.ceil(filteredMembers.value.length / pageSize.value)));
-const pagedMembers = computed(() => {
-  const start = (page.value - 1) * pageSize.value;
-  return filteredMembers.value.slice(start, start + pageSize.value);
-});
+const totalPages = computed(() => Math.max(1, Math.ceil(state.total / pageSize.value)));
 
 const resetFilters = () => {
   filters.query = '';
@@ -228,16 +220,22 @@ const resetFilters = () => {
   page.value = 1;
 };
 
-watch([() => filters.query, () => filters.role, () => filters.status, page], () => {
+watch([() => filters.query, () => filters.role, () => filters.status], () => {
+  page.value = 1;
+});
+
+watch([() => filters.query, () => filters.role, () => filters.status, page, pageSize], () => {
   router.replace({
     query: {
       ...route.query,
       q: filters.query || undefined,
       role: filters.role || undefined,
       status: filters.status || undefined,
-      page: page.value > 1 ? String(page.value) : undefined
+      page: page.value > 1 ? String(page.value) : undefined,
+      size: pageSize.value !== 10 ? String(pageSize.value) : undefined
     }
   });
+  loadTeam();
 });
 
 const toggleForm = () => {

@@ -305,6 +305,50 @@ function listReports(orgId, limit = 20, offset = 0) {
     .map(row => ({ ...row, stats: row.stats_json ? JSON.parse(row.stats_json) : null }));
 }
 
+function listReportsFiltered(orgId, filters = {}, limit = 20, offset = 0) {
+  const db = getDb();
+  const clauses = ['org_id = ?'];
+  const params = [orgId];
+
+  if (filters.role) {
+    clauses.push('role LIKE ?');
+    params.push(`%${filters.role}%`);
+  }
+  if (filters.city) {
+    clauses.push('city LIKE ?');
+    params.push(`%${filters.city}%`);
+  }
+  if (filters.from) {
+    clauses.push('created_at >= ?');
+    params.push(filters.from);
+  }
+
+  const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+  const rows = db.prepare(`SELECT * FROM reports ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`)
+    .all(...params, limit, offset);
+  return rows.map(row => ({ ...row, stats: row.stats_json ? JSON.parse(row.stats_json) : null }));
+}
+
+function countReports(orgId, filters = {}) {
+  const db = getDb();
+  const clauses = ['org_id = ?'];
+  const params = [orgId];
+  if (filters.role) {
+    clauses.push('role LIKE ?');
+    params.push(`%${filters.role}%`);
+  }
+  if (filters.city) {
+    clauses.push('city LIKE ?');
+    params.push(`%${filters.city}%`);
+  }
+  if (filters.from) {
+    clauses.push('created_at >= ?');
+    params.push(filters.from);
+  }
+  const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+  return db.prepare(`SELECT COUNT(*) as cnt FROM reports ${where}`).get(...params).cnt;
+}
+
 function createReport(orgId, payload) {
   const db = getDb();
   const id = `rep_${Date.now()}`;
@@ -387,6 +431,59 @@ function listTeam(orgId) {
     .all(orgId, 'deleted');
 }
 
+function listTeamFiltered(orgId, filters = {}, limit = 50, offset = 0) {
+  const db = getDb();
+  const clauses = ['org_id = ?', "status != 'deleted'"];
+  const params = [orgId];
+
+  if (filters.query) {
+    clauses.push('(name LIKE ? OR email LIKE ?)');
+    params.push(`%${filters.query}%`, `%${filters.query}%`);
+  }
+  if (filters.role) {
+    clauses.push('role = ?');
+    params.push(filters.role);
+  }
+  if (filters.status) {
+    if (filters.status === 'invited') {
+      clauses.push('status = ?');
+      params.push('invited');
+    }
+    if (filters.status === 'active') {
+      clauses.push("status != 'invited'");
+    }
+  }
+
+  const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+  return db.prepare(`SELECT * FROM web_users ${where} ORDER BY created_at ASC LIMIT ? OFFSET ?`)
+    .all(...params, limit, offset);
+}
+
+function countTeam(orgId, filters = {}) {
+  const db = getDb();
+  const clauses = ['org_id = ?', "status != 'deleted'"];
+  const params = [orgId];
+  if (filters.query) {
+    clauses.push('(name LIKE ? OR email LIKE ?)');
+    params.push(`%${filters.query}%`, `%${filters.query}%`);
+  }
+  if (filters.role) {
+    clauses.push('role = ?');
+    params.push(filters.role);
+  }
+  if (filters.status) {
+    if (filters.status === 'invited') {
+      clauses.push('status = ?');
+      params.push('invited');
+    }
+    if (filters.status === 'active') {
+      clauses.push("status != 'invited'");
+    }
+  }
+  const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+  return db.prepare(`SELECT COUNT(*) as cnt FROM web_users ${where}`).get(...params).cnt;
+}
+
 function inviteTeamMember(orgId, email, role = 'analyst') {
   const db = getDb();
   const existing = db.prepare('SELECT * FROM web_users WHERE email = ?').get(email.toLowerCase());
@@ -447,6 +544,47 @@ function listLeads(limit = 50, offset = 0) {
     .all(limit, offset);
 }
 
+function listLeadsFiltered(filters = {}, limit = 50, offset = 0) {
+  const db = getDb();
+  const clauses = ['1=1'];
+  const params = [];
+  if (filters.query) {
+    clauses.push('(company LIKE ? OR email LIKE ?)');
+    params.push(`%${filters.query}%`, `%${filters.query}%`);
+  }
+  if (filters.status) {
+    clauses.push('status = ?');
+    params.push(filters.status);
+  }
+  if (filters.from) {
+    clauses.push('created_at >= ?');
+    params.push(filters.from);
+  }
+  const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+  return db.prepare(`SELECT id, company, email, message, source, status, note, created_at FROM leads ${where} ORDER BY id DESC LIMIT ? OFFSET ?`)
+    .all(...params, limit, offset);
+}
+
+function countLeads(filters = {}) {
+  const db = getDb();
+  const clauses = ['1=1'];
+  const params = [];
+  if (filters.query) {
+    clauses.push('(company LIKE ? OR email LIKE ?)');
+    params.push(`%${filters.query}%`, `%${filters.query}%`);
+  }
+  if (filters.status) {
+    clauses.push('status = ?');
+    params.push(filters.status);
+  }
+  if (filters.from) {
+    clauses.push('created_at >= ?');
+    params.push(filters.from);
+  }
+  const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+  return db.prepare(`SELECT COUNT(*) as cnt FROM leads ${where}`).get(...params).cnt;
+}
+
 function updateLead(id, payload) {
   const db = getDb();
   const status = payload.status;
@@ -469,6 +607,48 @@ function listAuditLogs(limit = 50, offset = 0) {
   return db.prepare('SELECT id, actor_id, action, target, payload_json, created_at FROM audit_logs ORDER BY id DESC LIMIT ? OFFSET ?')
     .all(limit, offset)
     .map(row => ({ ...row, payload: row.payload_json ? JSON.parse(row.payload_json) : null }));
+}
+
+function listAuditLogsFiltered(filters = {}, limit = 50, offset = 0) {
+  const db = getDb();
+  const clauses = ['1=1'];
+  const params = [];
+  if (filters.query) {
+    clauses.push('(actor_id LIKE ? OR action LIKE ? OR target LIKE ?)');
+    params.push(`%${filters.query}%`, `%${filters.query}%`, `%${filters.query}%`);
+  }
+  if (filters.action) {
+    clauses.push('action LIKE ?');
+    params.push(`%${filters.action}%`);
+  }
+  if (filters.from) {
+    clauses.push('created_at >= ?');
+    params.push(filters.from);
+  }
+  const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+  return db.prepare(`SELECT id, actor_id, action, target, payload_json, created_at FROM audit_logs ${where} ORDER BY id DESC LIMIT ? OFFSET ?`)
+    .all(...params, limit, offset)
+    .map(row => ({ ...row, payload: row.payload_json ? JSON.parse(row.payload_json) : null }));
+}
+
+function countAuditLogs(filters = {}) {
+  const db = getDb();
+  const clauses = ['1=1'];
+  const params = [];
+  if (filters.query) {
+    clauses.push('(actor_id LIKE ? OR action LIKE ? OR target LIKE ?)');
+    params.push(`%${filters.query}%`, `%${filters.query}%`, `%${filters.query}%`);
+  }
+  if (filters.action) {
+    clauses.push('action LIKE ?');
+    params.push(`%${filters.action}%`);
+  }
+  if (filters.from) {
+    clauses.push('created_at >= ?');
+    params.push(filters.from);
+  }
+  const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+  return db.prepare(`SELECT COUNT(*) as cnt FROM audit_logs ${where}`).get(...params).cnt;
 }
 
 module.exports = {
@@ -495,6 +675,8 @@ module.exports = {
   createOrGetWebUser,
   getWebUserById,
   listReports,
+  listReportsFiltered,
+  countReports,
   createReport,
   getReport,
   deleteReport,
@@ -502,6 +684,8 @@ module.exports = {
   createRoleProfile,
   deleteRoleProfile,
   listTeam,
+  listTeamFiltered,
+  countTeam,
   inviteTeamMember,
   updateTeamRole,
   deleteTeamMember,
@@ -509,7 +693,11 @@ module.exports = {
   incrementB2BUsage,
   createLead,
   listLeads,
+  listLeadsFiltered,
+  countLeads,
   addAuditLog,
   listAuditLogs,
+  listAuditLogsFiltered,
+  countAuditLogs,
   updateLead
 };

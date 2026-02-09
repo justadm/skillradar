@@ -73,7 +73,7 @@
     <div class="card" v-if="state.data">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-          <div class="text-secondary small">Отчётов: {{ filteredItems.length }}</div>
+          <div class="text-secondary small">Отчётов: {{ state.total }}</div>
           <div class="d-flex align-items-center gap-2">
             <label class="text-secondary small">На странице</label>
             <select v-model.number="pageSize" class="form-select form-select-sm" style="width: auto;">
@@ -159,10 +159,11 @@ const api = useApi();
 const { isAuthed } = useAuth();
 const { canCreateReports, canExportReports, canDeleteReports } = useAccess();
 const router = useRouter();
-const state = reactive<{ loading: boolean; error: boolean; data: any | null }>({
+const state = reactive<{ loading: boolean; error: boolean; data: any | null; total: number }>({
   loading: true,
   error: false,
-  data: null
+  data: null,
+  total: 0
 });
 const showForm = ref(false);
 const formMessage = ref('');
@@ -182,7 +183,15 @@ const badgeClass = (status: string) => {
 const fetchReports = async () => {
   try {
     state.loading = true;
-    state.data = await api.getReports();
+    const res = await api.getReports({
+      role: filters.role || undefined,
+      city: filters.city || undefined,
+      from: filters.from || undefined,
+      limit: pageSize.value,
+      offset: (page.value - 1) * pageSize.value
+    });
+    state.data = res;
+    state.total = res?.total ?? res?.items?.length ?? 0;
   } catch {
     state.error = true;
   } finally {
@@ -190,30 +199,19 @@ const fetchReports = async () => {
   }
 };
 
-onMounted(fetchReports);
 onMounted(() => {
   const q = route.query;
   if (typeof q.role === 'string') filters.role = q.role;
   if (typeof q.city === 'string') filters.city = q.city;
   if (typeof q.from === 'string') filters.from = q.from;
   if (typeof q.page === 'string') page.value = Number(q.page) || 1;
+  if (typeof q.size === 'string') pageSize.value = Number(q.size) || 10;
+  fetchReports();
 });
 
-const filteredItems = computed(() => {
-  if (!state.data?.items) return [];
-  return state.data.items.filter((item: any) => {
-    const roleOk = !filters.role || String(item.role || '').toLowerCase().includes(filters.role.toLowerCase());
-    const cityOk = !filters.city || String(item.region || '').toLowerCase().includes(filters.city.toLowerCase());
-    const dateOk = !filters.from || String(item.date || '') >= filters.from;
-    return roleOk && cityOk && dateOk;
-  });
-});
-
-const totalPages = computed(() => Math.max(1, Math.ceil(filteredItems.value.length / pageSize.value)));
-const pagedItems = computed(() => {
-  const start = (page.value - 1) * pageSize.value;
-  return filteredItems.value.slice(start, start + pageSize.value);
-});
+const filteredItems = computed(() => state.data?.items || []);
+const totalPages = computed(() => Math.max(1, Math.ceil(state.total / pageSize.value)));
+const pagedItems = computed(() => filteredItems.value);
 
 const toggleForm = () => {
   showForm.value = !showForm.value;
@@ -251,16 +249,22 @@ const resetFilters = () => {
   page.value = 1;
 };
 
-watch([() => filters.role, () => filters.city, () => filters.from, page], () => {
+watch([() => filters.role, () => filters.city, () => filters.from], () => {
+  page.value = 1;
+});
+
+watch([() => filters.role, () => filters.city, () => filters.from, page, pageSize], () => {
   router.replace({
     query: {
       ...route.query,
       role: filters.role || undefined,
       city: filters.city || undefined,
       from: filters.from || undefined,
-      page: page.value > 1 ? String(page.value) : undefined
+      page: page.value > 1 ? String(page.value) : undefined,
+      size: pageSize.value !== 10 ? String(pageSize.value) : undefined
     }
   });
+  fetchReports();
 });
 
 const exportCsv = () => {

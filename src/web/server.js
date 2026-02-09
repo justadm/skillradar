@@ -22,9 +22,17 @@ const {
   deleteTeamMember,
   createLead,
   listLeads,
+  listLeadsFiltered,
+  countLeads,
   updateLead,
   addAuditLog,
-  listAuditLogs
+  listAuditLogs,
+  listAuditLogsFiltered,
+  countAuditLogs,
+  listTeamFiltered,
+  countTeam,
+  listReportsFiltered,
+  countReports
 } = require('../db');
 
 const WEB_PORT = process.env.WEB_PORT || 3000;
@@ -223,12 +231,28 @@ function buildApiRouter() {
   app.get(`${API_BASE}/leads`, requireAuth, requireRole('admin'), (req, res) => {
     const limit = Number(req.query.limit || 50);
     const offset = Number(req.query.offset || 0);
-    const items = listLeads(limit, offset);
-    if (!items.length) {
+    const filters = {
+      query: req.query.q ? String(req.query.q) : '',
+      status: req.query.status ? String(req.query.status) : '',
+      from: req.query.from ? String(req.query.from) : ''
+    };
+    const items = listLeadsFiltered(filters, limit, offset);
+    const total = countLeads(filters);
+    if (!items.length && total === 0) {
       const data = readMock('leads');
-      return res.json({ items: data.items || [], total: (data.items || []).length });
+      const all = Array.isArray(data.items) ? data.items : [];
+      const filtered = all.filter(item => {
+        const hay = `${item.company || ''} ${item.email || ''}`.toLowerCase();
+        const q = String(filters.query || '').toLowerCase();
+        const queryOk = !q || hay.includes(q);
+        const statusOk = !filters.status || String(item.status || '').toLowerCase() === filters.status;
+        const dateOk = !filters.from || String(item.created_at || '') >= filters.from;
+        return queryOk && statusOk && dateOk;
+      });
+      const paged = filtered.slice(offset, offset + limit);
+      return res.json({ items: paged, total: filtered.length });
     }
-    res.json({ items, total: items.length });
+    res.json({ items, total });
   });
 
   app.patch(`${API_BASE}/leads/:id`, requireAuth, requireRole('admin'), (req, res) => {
@@ -240,10 +264,24 @@ function buildApiRouter() {
   app.get(`${API_BASE}/reports`, requireAuth, (req, res) => {
     const limit = Number(req.query.limit || 20);
     const offset = Number(req.query.offset || 0);
-    const items = listReports(req.user.org_id, limit, offset);
-    if (!items.length) {
+    const filters = {
+      role: req.query.role ? String(req.query.role) : '',
+      city: req.query.city ? String(req.query.city) : '',
+      from: req.query.from ? String(req.query.from) : ''
+    };
+    const items = listReportsFiltered(req.user.org_id, filters, limit, offset);
+    const total = countReports(req.user.org_id, filters);
+    if (!items.length && total === 0) {
       const data = readMock('reports');
-      return res.json({ items: data.items, total: data.items.length });
+      const all = Array.isArray(data.items) ? data.items : [];
+      const filtered = all.filter(item => {
+        const roleOk = !filters.role || String(item.role || '').toLowerCase().includes(filters.role.toLowerCase());
+        const cityOk = !filters.city || String(item.region || '').toLowerCase().includes(filters.city.toLowerCase());
+        const dateOk = !filters.from || String(item.date || '') >= filters.from;
+        return roleOk && cityOk && dateOk;
+      });
+      const paged = filtered.slice(offset, offset + limit);
+      return res.json({ items: paged, total: filtered.length });
     }
     res.json({
       items: items.map(item => ({
@@ -254,7 +292,7 @@ function buildApiRouter() {
         date: item.created_at.slice(0, 10),
         status: item.status === 'processing' ? 'В работе' : 'Готов'
       })),
-      total: items.length
+      total
     });
   });
 
@@ -349,14 +387,35 @@ function buildApiRouter() {
   app.get(`${API_BASE}/team`, requireAuth, requireRole('admin'), (req, res) => {
     const limit = Number(req.query.limit || 50);
     const offset = Number(req.query.offset || 0);
-    const items = listTeam(req.user.org_id).slice(offset, offset + limit);
+    const filters = {
+      query: req.query.q ? String(req.query.q) : '',
+      role: req.query.role ? String(req.query.role) : '',
+      status: req.query.status ? String(req.query.status) : ''
+    };
+    const items = listTeamFiltered(req.user.org_id, filters, limit, offset);
+    const total = countTeam(req.user.org_id, filters);
+    if (!items.length && total === 0) {
+      const data = readMock('team');
+      const all = Array.isArray(data.members) ? data.members : [];
+      const filtered = all.filter(member => {
+        const hay = `${member.name || ''} ${member.email || ''}`.toLowerCase();
+        const q = String(filters.query || '').toLowerCase();
+        const queryOk = !q || hay.includes(q);
+        const roleOk = !filters.role || String(member.role || '').toLowerCase() === filters.role;
+        const status = String(member.access || '').toLowerCase().includes('invitation') ? 'invited' : 'active';
+        const statusOk = !filters.status || status === filters.status;
+        return queryOk && roleOk && statusOk;
+      });
+      const paged = filtered.slice(offset, offset + limit);
+      return res.json({ members: paged, total: filtered.length });
+    }
     res.json({ members: items.map(user => ({
       id: user.id,
       name: user.name || user.email,
       email: user.email,
       role: user.role,
       access: user.status === 'invited' ? 'Invitation pending' : 'Active'
-    })), total: items.length });
+    })), total });
   });
 
   app.post(`${API_BASE}/team/invite`, requireAuth, requireRole('admin'), (req, res) => {
@@ -407,12 +466,28 @@ function buildApiRouter() {
   app.get(`${API_BASE}/audit`, requireAuth, requireRole('admin'), (req, res) => {
     const limit = Number(req.query.limit || 50);
     const offset = Number(req.query.offset || 0);
-    const items = listAuditLogs(limit, offset);
-    if (!items.length) {
+    const filters = {
+      query: req.query.q ? String(req.query.q) : '',
+      action: req.query.action ? String(req.query.action) : '',
+      from: req.query.from ? String(req.query.from) : ''
+    };
+    const items = listAuditLogsFiltered(filters, limit, offset);
+    const total = countAuditLogs(filters);
+    if (!items.length && total === 0) {
       const data = readMock('audit');
-      return res.json({ items: data.items || [], total: (data.items || []).length });
+      const all = Array.isArray(data.items) ? data.items : [];
+      const filtered = all.filter(item => {
+        const hay = `${item.actor_id || ''} ${item.action || ''} ${item.target || ''}`.toLowerCase();
+        const q = String(filters.query || '').toLowerCase();
+        const queryOk = !q || hay.includes(q);
+        const actionOk = !filters.action || String(item.action || '').toLowerCase().includes(filters.action.toLowerCase());
+        const dateOk = !filters.from || String(item.created_at || '') >= filters.from;
+        return queryOk && actionOk && dateOk;
+      });
+      const paged = filtered.slice(offset, offset + limit);
+      return res.json({ items: paged, total: filtered.length });
     }
-    res.json({ items, total: items.length });
+    res.json({ items, total });
   });
 
   return app;

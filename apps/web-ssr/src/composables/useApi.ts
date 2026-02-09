@@ -3,12 +3,15 @@ import { useAuth } from './useAuth';
 
 const apiBase = '/api/v1';
 
-async function apiGet<T>(path: string): Promise<T> {
+async function apiGet<T>(path: string, params?: Record<string, string | number | undefined>): Promise<T> {
   const { token } = useAuth();
   if (!token.value) {
     return (demoData as any)[path] as T;
   }
-  const res = await fetch(`${apiBase}/${path}`, {
+  const qs = params
+    ? `?${Object.entries(params).filter(([, v]) => v !== undefined && v !== '').map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`).join('&')}`
+    : '';
+  const res = await fetch(`${apiBase}/${path}${qs}`, {
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token.value}`
@@ -77,16 +80,16 @@ async function apiDownload(path: string): Promise<Blob> {
 export function useApi() {
   return {
     getDashboard: () => apiGet('dashboard'),
-    getReports: () => apiGet('reports'),
+    getReports: (params?: Record<string, string | number | undefined>) => apiGet('reports', params),
     getRoles: () => apiGet('roles'),
     getCompetitors: () => apiGet('competitors'),
     getTemplate: () => apiGet('template'),
-    getTeam: () => apiGet('team'),
+    getTeam: (params?: Record<string, string | number | undefined>) => apiGet('team', params),
     getBilling: () => apiGet('billing'),
     getSettings: () => apiGet('settings'),
     getMe: () => apiGet('me'),
-    getLeads: () => apiGet('leads'),
-    getAudit: () => apiGet('audit'),
+    getLeads: (params?: Record<string, string | number | undefined>) => apiGet('leads', params),
+    getAudit: (params?: Record<string, string | number | undefined>) => apiGet('audit', params),
     createReport: (payload: any) => apiPost('reports', payload),
     deleteReport: (id: string) => apiDelete(`reports/${id}`),
     exportReport: (id: string, format: 'pdf' | 'csv' = 'pdf') => apiDownload(`reports/${id}/export?format=${format}`),
