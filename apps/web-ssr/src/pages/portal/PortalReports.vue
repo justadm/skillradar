@@ -64,16 +64,24 @@
             <input v-model="filters.from" class="form-control" type="date" />
           </div>
           <div class="col-md-2">
-          <button class="btn btn-outline-secondary w-100" type="button" @click="resetFilters">Сбросить</button>
+            <button class="btn btn-outline-secondary w-100" type="button" @click="resetFilters">Сбросить</button>
+          </div>
         </div>
       </div>
-    </div>
     </div>
 
     <div class="card" v-if="state.data">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
           <div class="text-secondary small">Отчётов: {{ filteredItems.length }}</div>
+          <div class="d-flex align-items-center gap-2">
+            <label class="text-secondary small">На странице</label>
+            <select v-model.number="pageSize" class="form-select form-select-sm" style="width: auto;">
+              <option :value="5">5</option>
+              <option :value="10">10</option>
+              <option :value="20">20</option>
+            </select>
+          </div>
           <button class="btn btn-outline-secondary btn-sm" :disabled="!filteredItems.length || !canExportReports" @click="exportCsv">
             Экспорт CSV
           </button>
@@ -91,7 +99,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="item in filteredItems" :key="item.id || (item.role + item.date)">
+              <tr v-for="item in pagedItems" :key="item.id || (item.role + item.date)">
                 <td>{{ item.role }}</td>
                 <td>{{ item.region }}</td>
                 <td>{{ item.type }}</td>
@@ -108,6 +116,11 @@
               </tr>
             </tbody>
           </table>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mt-3" v-if="totalPages > 1">
+          <button class="btn btn-outline-secondary btn-sm" :disabled="page === 1" @click="page -= 1">Назад</button>
+          <span class="text-secondary small">Стр. {{ page }} из {{ totalPages }}</span>
+          <button class="btn btn-outline-secondary btn-sm" :disabled="page === totalPages" @click="page += 1">Вперед</button>
         </div>
       </div>
     </div>
@@ -134,8 +147,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { useApi } from '../../composables/useApi';
 import { useAuth } from '../../composables/useAuth';
 import { useAccess } from '../../composables/useAccess';
@@ -157,6 +170,9 @@ const form = reactive({ role: '', city: '', type: 'market' });
 const showDelete = ref(false);
 const pendingDelete = ref<any | null>(null);
 const filters = reactive({ role: '', city: '', from: '' });
+const page = ref(1);
+const pageSize = ref(10);
+const route = useRoute();
 
 const badgeClass = (status: string) => {
   if (status?.toLowerCase().includes('работ')) return 'text-bg-warning';
@@ -175,6 +191,13 @@ const fetchReports = async () => {
 };
 
 onMounted(fetchReports);
+onMounted(() => {
+  const q = route.query;
+  if (typeof q.role === 'string') filters.role = q.role;
+  if (typeof q.city === 'string') filters.city = q.city;
+  if (typeof q.from === 'string') filters.from = q.from;
+  if (typeof q.page === 'string') page.value = Number(q.page) || 1;
+});
 
 const filteredItems = computed(() => {
   if (!state.data?.items) return [];
@@ -184,6 +207,12 @@ const filteredItems = computed(() => {
     const dateOk = !filters.from || String(item.date || '') >= filters.from;
     return roleOk && cityOk && dateOk;
   });
+});
+
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredItems.value.length / pageSize.value)));
+const pagedItems = computed(() => {
+  const start = (page.value - 1) * pageSize.value;
+  return filteredItems.value.slice(start, start + pageSize.value);
 });
 
 const toggleForm = () => {
@@ -219,7 +248,20 @@ const resetFilters = () => {
   filters.role = '';
   filters.city = '';
   filters.from = '';
+  page.value = 1;
 };
+
+watch([() => filters.role, () => filters.city, () => filters.from, page], () => {
+  router.replace({
+    query: {
+      ...route.query,
+      role: filters.role || undefined,
+      city: filters.city || undefined,
+      from: filters.from || undefined,
+      page: page.value > 1 ? String(page.value) : undefined
+    }
+  });
+});
 
 const exportCsv = () => {
   const header = 'role,city,type,date,status';
