@@ -15,9 +15,21 @@ function extractKeywords(text) {
 
 function computeMarketStats(vacancies, totalFound) {
   const counts = new Map();
+  const cityCounts = new Map();
+  const levelCounts = new Map([
+    ['junior', 0],
+    ['middle', 0],
+    ['senior', 0],
+    ['unknown', 0]
+  ]);
   let remoteCount = 0;
   let salaryFrom = [];
   let salaryTo = [];
+  let last7 = 0;
+  let prev7 = 0;
+
+  const now = Date.now();
+  const dayMs = 24 * 60 * 60 * 1000;
 
   for (const v of vacancies) {
     const req = v.snippet?.requirement || '';
@@ -31,6 +43,26 @@ function computeMarketStats(vacancies, totalFound) {
     const scheduleId = v.schedule?.id || '';
     if (String(scheduleId).toLowerCase().includes('remote')) remoteCount += 1;
 
+    const city = v.area?.name || '';
+    if (city) cityCounts.set(city, (cityCounts.get(city) || 0) + 1);
+
+    const expId = v.experience?.id || '';
+    const expKey = expId === 'noExperience'
+      ? 'junior'
+      : expId === 'between1And3'
+        ? 'middle'
+        : expId === 'between3And6' || expId === 'moreThan6'
+          ? 'senior'
+          : 'unknown';
+    levelCounts.set(expKey, (levelCounts.get(expKey) || 0) + 1);
+
+    const published = v.published_at ? Date.parse(v.published_at) : 0;
+    if (published) {
+      const delta = now - published;
+      if (delta <= dayMs * 7) last7 += 1;
+      else if (delta <= dayMs * 14) prev7 += 1;
+    }
+
     if (v.salary) {
       if (v.salary.from) salaryFrom.push(v.salary.from);
       if (v.salary.to) salaryTo.push(v.salary.to);
@@ -43,6 +75,16 @@ function computeMarketStats(vacancies, totalFound) {
     .map(([skill, count]) => ({ skill, count }));
 
   const avg = arr => arr.length ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
+  const topCities = Array.from(cityCounts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([city, count]) => ({ city, count }));
+
+  const trend = prev7 > 0
+    ? Math.round(((last7 - prev7) / prev7) * 100)
+    : last7 > 0
+      ? 100
+      : 0;
 
   return {
     total_found: totalFound || vacancies.length,
@@ -50,7 +92,14 @@ function computeMarketStats(vacancies, totalFound) {
     remote_share: vacancies.length ? Math.round((remoteCount / vacancies.length) * 100) : 0,
     salary_from_avg: avg(salaryFrom),
     salary_to_avg: avg(salaryTo),
-    top_skills: topSkills
+    top_skills: topSkills,
+    top_cities: topCities,
+    levels: Object.fromEntries(levelCounts),
+    trend_7d: {
+      last7,
+      prev7,
+      delta_percent: trend
+    }
   };
 }
 

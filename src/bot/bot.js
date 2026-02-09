@@ -206,6 +206,102 @@ function applyUserFilters(items, filters) {
   return res;
 }
 
+function extractB2BFilters(text) {
+  const t = String(text || '').toLowerCase();
+  const locationMap = [
+    ['москва', 'Москва'],
+    ['moscow', 'Москва'],
+    ['санкт-петербург', 'Санкт-Петербург'],
+    ['питер', 'Санкт-Петербург'],
+    ['спб', 'Санкт-Петербург'],
+    ['екатеринбург', 'Екатеринбург'],
+    ['новосибирск', 'Новосибирск'],
+    ['казань', 'Казань']
+  ];
+
+  let location = '';
+  for (const [key, name] of locationMap) {
+    if (t.includes(key)) {
+      location = name;
+      break;
+    }
+  }
+
+  const remote = /удаленк|remote|удаленно/.test(t);
+  const office = /офис/.test(t);
+  const hybrid = /гибрид|hybrid/.test(t);
+
+  let level = '';
+  if (/junior|интерн|стаж/.test(t)) level = 'junior';
+  if (/middle|mid|2\+|2-4|2–4/.test(t)) level = level || 'middle';
+  if (/senior|lead|team lead|старш|лид/.test(t)) level = 'senior';
+
+  const avoid = [];
+  if (/аутсорс/.test(t)) avoid.push('аутсорс');
+  if (/аутстафф/.test(t)) avoid.push('аутстафф');
+  if (/агентств/.test(t)) avoid.push('агентство');
+
+  const include = [];
+  if (/fintech|финтех|банк|банки|bank/.test(t)) include.push('банк', 'fintech', 'финтех');
+  if (/retail|ритейл|ecom|e-commerce|маркетплейс/.test(t)) include.push('ритейл', 'retail', 'e-commerce', 'маркетплейс');
+  if (/telecom|телеком/.test(t)) include.push('телеком', 'telecom');
+  if (/gamedev|игров/.test(t)) include.push('gamedev', 'игров');
+  if (/edtech|образован/.test(t)) include.push('edtech', 'образован');
+  if (/health|медиц|medtech/.test(t)) include.push('health', 'медиц', 'medtech');
+  if (/gov|гос|госкомп/.test(t)) include.push('гос', 'gov');
+
+  return { location, remote, office, hybrid, level, avoid, include };
+}
+
+function applyB2BFilters(items, filters) {
+  let res = items;
+  if (filters.location) {
+    const loc = filters.location.toLowerCase();
+    res = res.filter(v => String(v.area?.name || '').toLowerCase().includes(loc));
+  }
+  if (filters.remote) {
+    res = res.filter(v => String(v.schedule?.id || '').toLowerCase().includes('remote'));
+  }
+  if (filters.office) {
+    res = res.filter(v => !String(v.schedule?.id || '').toLowerCase().includes('remote'));
+  }
+  if (filters.hybrid) {
+    res = res.filter(v => String(v.schedule?.id || '').toLowerCase().includes('flex'));
+  }
+  if (filters.level) {
+    res = res.filter(v => {
+      const id = String(v.experience?.id || '');
+      if (filters.level === 'junior') return id === 'noExperience';
+      if (filters.level === 'middle') return id === 'between1And3';
+      if (filters.level === 'senior') return id === 'between3And6' || id === 'moreThan6';
+      return true;
+    });
+  }
+  if (filters.include?.length) {
+    res = res.filter(v => {
+      const text = [
+        v.name,
+        v.employer?.name,
+        v.snippet?.requirement,
+        v.snippet?.responsibility
+      ].filter(Boolean).join(' ').toLowerCase();
+      return filters.include.some(word => text.includes(word));
+    });
+  }
+  if (filters.avoid?.length) {
+    res = res.filter(v => {
+      const text = [
+        v.name,
+        v.employer?.name,
+        v.snippet?.requirement,
+        v.snippet?.responsibility
+      ].filter(Boolean).join(' ').toLowerCase();
+      return !filters.avoid.some(word => text.includes(word));
+    });
+  }
+  return res;
+}
+
 function uniqTopSkills(list, limit) {
   const res = [];
   const seen = new Set();
@@ -369,15 +465,22 @@ async function handleB2BMarket(ctx, text) {
   await ctx.reply('Собираю аналитику рынка…', { reply_markup: { remove_keyboard: true } });
   const cacheKey = `b2b:market:${String(text || '').toLowerCase()}:${process.env.HH_AREA_DEFAULT || '113'}`;
   const cached = getMarketCache(cacheKey);
+  const filters = extractB2BFilters(text);
   if (cached) {
     const stats = JSON.parse(cached.stats_json);
     const topSkills = uniqTopSkills(stats.top_skills || [], 7);
+    const topCities = (stats.top_cities || []).map(c => `${c.city} (${c.count})`).join(', ');
+    const levels = stats.levels || {};
+    const trend = stats.trend_7d || {};
     const msg = [
       `<b>Рынок: ${escapeHtml(text)}</b>`,
       `Вакансий (оценка): ${stats.total_found}`,
       `Удаленка: ~${stats.remote_share}%`,
       stats.salary_from_avg ? `Средняя "от": ${stats.salary_from_avg} RUR` : 'Средняя "от": —',
       stats.salary_to_avg ? `Средняя "до": ${stats.salary_to_avg} RUR` : 'Средняя "до": —',
+      topCities ? `Топ городов: ${escapeHtml(topCities)}` : 'Топ городов: —',
+      `Уровни: junior ${levels.junior || 0} / middle ${levels.middle || 0} / senior ${levels.senior || 0}`,
+      Number.isFinite(trend.delta_percent) ? `Тренд 7д: ${trend.delta_percent >= 0 ? '+' : ''}${trend.delta_percent}%` : '',
       topSkills ? `Топ навыков: ${escapeHtml(topSkills)}` : 'Топ навыков: —'
     ].filter(Boolean).join('\n');
     await ctx.reply(msg, { parse_mode: 'HTML' });
@@ -392,15 +495,22 @@ async function handleB2BMarket(ctx, text) {
     const second = await searchVacancies(params, 1, 50);
     items = items.concat(second.items || []);
   }
+  items = applyB2BFilters(items, filters);
   const stats = computeMarketStats(items, first.found || items.length);
   saveMarketCache(cacheKey, stats);
   const topSkills = uniqTopSkills(stats.top_skills || [], 7);
+  const topCities = (stats.top_cities || []).map(c => `${c.city} (${c.count})`).join(', ');
+  const levels = stats.levels || {};
+  const trend = stats.trend_7d || {};
   const msg = [
     `<b>Рынок: ${escapeHtml(text)}</b>`,
     `Вакансий (оценка): ${stats.total_found}`,
     `Удаленка: ~${stats.remote_share}%`,
     stats.salary_from_avg ? `Средняя "от": ${stats.salary_from_avg} RUR` : 'Средняя "от": —',
     stats.salary_to_avg ? `Средняя "до": ${stats.salary_to_avg} RUR` : 'Средняя "до": —',
+    topCities ? `Топ городов: ${escapeHtml(topCities)}` : 'Топ городов: —',
+    `Уровни: junior ${levels.junior || 0} / middle ${levels.middle || 0} / senior ${levels.senior || 0}`,
+    Number.isFinite(trend.delta_percent) ? `Тренд 7д: ${trend.delta_percent >= 0 ? '+' : ''}${trend.delta_percent}%` : '',
     topSkills ? `Топ навыков: ${escapeHtml(topSkills)}` : 'Топ навыков: —'
   ].filter(Boolean).join('\n');
   await ctx.reply(msg, { parse_mode: 'HTML' });
@@ -412,6 +522,7 @@ async function handleB2BCompetitors(ctx, text) {
   await ctx.reply('Собираю список конкурентов…', { reply_markup: { remove_keyboard: true } });
   const cacheKey = `b2b:comp:${String(text || '').toLowerCase()}:${process.env.HH_AREA_DEFAULT || '113'}`;
   const cached = getMarketCache(cacheKey);
+  const filters = extractB2BFilters(text);
   if (cached) {
     const data = JSON.parse(cached.stats_json);
     const lines = (data.lines || []).join('\n');
@@ -431,6 +542,7 @@ async function handleB2BCompetitors(ctx, text) {
     const second = await searchVacancies(params, 1, 50);
     items = items.concat(second.items || []);
   }
+  items = applyB2BFilters(items, filters);
   const counts = new Map();
   for (const v of items) {
     const name = v.employer?.name || '—';
@@ -455,6 +567,7 @@ async function handleB2BTemplate(ctx, text) {
   await ctx.reply('Формирую шаблон вакансии…', { reply_markup: { remove_keyboard: true } });
   const cacheKey = `b2b:template:${String(text || '').toLowerCase()}:${process.env.HH_AREA_DEFAULT || '113'}`;
   const cached = getMarketCache(cacheKey);
+  const filters = extractB2BFilters(text);
   if (cached) {
     const stats = JSON.parse(cached.stats_json);
     const topSkills = uniqTopSkills(stats.top_skills || [], 6);
@@ -477,6 +590,7 @@ async function handleB2BTemplate(ctx, text) {
     const second = await searchVacancies(params, 1, 50);
     items = items.concat(second.items || []);
   }
+  items = applyB2BFilters(items, filters);
   const stats = computeMarketStats(items, first.found || items.length);
   saveMarketCache(cacheKey, stats);
   const topSkills = uniqTopSkills(stats.top_skills || [], 6);
