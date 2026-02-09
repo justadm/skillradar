@@ -39,6 +39,17 @@
 
     <div class="card" v-if="state.data && canViewAudit">
       <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+          <div class="text-secondary small">Найдено: {{ filteredItems.length }}</div>
+          <div class="d-flex align-items-center gap-2">
+            <label class="text-secondary small">На странице</label>
+            <select v-model.number="pageSize" class="form-select form-select-sm" style="width: auto;">
+              <option :value="10">10</option>
+              <option :value="20">20</option>
+              <option :value="50">50</option>
+            </select>
+          </div>
+        </div>
         <div class="table-responsive">
           <table class="table align-middle">
             <thead>
@@ -52,7 +63,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="item in filteredItems" :key="item.id">
+              <tr v-for="item in pagedItems" :key="item.id">
                 <td>{{ item.id }}</td>
                 <td>{{ item.actor_id || '—' }}</td>
                 <td>{{ item.action }}</td>
@@ -63,13 +74,19 @@
             </tbody>
           </table>
         </div>
+        <div class="d-flex justify-content-between align-items-center mt-3" v-if="totalPages > 1">
+          <button class="btn btn-outline-secondary btn-sm" :disabled="page === 1" @click="page -= 1">Назад</button>
+          <span class="text-secondary small">Стр. {{ page }} из {{ totalPages }}</span>
+          <button class="btn btn-outline-secondary btn-sm" :disabled="page === totalPages" @click="page += 1">Вперед</button>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useApi } from '../../composables/useApi';
 import { useAccess } from '../../composables/useAccess';
 import { useHead } from '../../composables/useHead';
@@ -82,6 +99,10 @@ const state = reactive<{ loading: boolean; error: boolean; data: any | null }>({
   data: null
 });
 const filters = reactive({ query: '', action: '', from: '' });
+const page = ref(1);
+const pageSize = ref(20);
+const router = useRouter();
+const route = useRoute();
 
 onMounted(async () => {
   if (!canViewAudit.value) {
@@ -97,6 +118,14 @@ onMounted(async () => {
   }
 });
 
+onMounted(() => {
+  const q = route.query;
+  if (typeof q.q === 'string') filters.query = q.q;
+  if (typeof q.action === 'string') filters.action = q.action;
+  if (typeof q.from === 'string') filters.from = q.from;
+  if (typeof q.page === 'string') page.value = Number(q.page) || 1;
+});
+
 const filteredItems = computed(() => {
   if (!state.data?.items) return [];
   const q = filters.query.toLowerCase();
@@ -109,11 +138,30 @@ const filteredItems = computed(() => {
   });
 });
 
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredItems.value.length / pageSize.value)));
+const pagedItems = computed(() => {
+  const start = (page.value - 1) * pageSize.value;
+  return filteredItems.value.slice(start, start + pageSize.value);
+});
+
 const resetFilters = () => {
   filters.query = '';
   filters.action = '';
   filters.from = '';
+  page.value = 1;
 };
+
+watch([() => filters.query, () => filters.action, () => filters.from, page], () => {
+  router.replace({
+    query: {
+      ...route.query,
+      q: filters.query || undefined,
+      action: filters.action || undefined,
+      from: filters.from || undefined,
+      page: page.value > 1 ? String(page.value) : undefined
+    }
+  });
+});
 
 const formatPayload = (payload: any) => {
   if (!payload) return '—';

@@ -77,6 +77,17 @@
 
     <div class="card" v-if="state.data">
       <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+          <div class="text-secondary small">Найдено: {{ filteredMembers.length }}</div>
+          <div class="d-flex align-items-center gap-2">
+            <label class="text-secondary small">На странице</label>
+            <select v-model.number="pageSize" class="form-select form-select-sm" style="width: auto;">
+              <option :value="5">5</option>
+              <option :value="10">10</option>
+              <option :value="20">20</option>
+            </select>
+          </div>
+        </div>
         <div class="table-responsive">
           <table class="table align-middle">
             <thead>
@@ -89,7 +100,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="member in filteredMembers" :key="member.id || member.email">
+              <tr v-for="member in pagedMembers" :key="member.id || member.email">
                 <td>{{ member.name }}</td>
                 <td>{{ member.email || '—' }}</td>
                 <td>
@@ -112,6 +123,11 @@
               </tr>
             </tbody>
           </table>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mt-3" v-if="totalPages > 1">
+          <button class="btn btn-outline-secondary btn-sm" :disabled="page === 1" @click="page -= 1">Назад</button>
+          <span class="text-secondary small">Стр. {{ page }} из {{ totalPages }}</span>
+          <button class="btn btn-outline-secondary btn-sm" :disabled="page === totalPages" @click="page += 1">Вперед</button>
         </div>
       </div>
     </div>
@@ -138,7 +154,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { useApi } from '../../composables/useApi';
 import { useAuth } from '../../composables/useAuth';
 import { useAccess } from '../../composables/useAccess';
@@ -159,6 +176,10 @@ const form = reactive({ email: '', role: 'analyst' });
 const showDelete = ref(false);
 const pendingDelete = ref<any | null>(null);
 const filters = reactive({ query: '', role: '', status: '' });
+const page = ref(1);
+const pageSize = ref(10);
+const router = useRouter();
+const route = useRoute();
 
 const loadTeam = async () => {
   try {
@@ -172,6 +193,13 @@ const loadTeam = async () => {
 };
 
 onMounted(loadTeam);
+onMounted(() => {
+  const q = route.query;
+  if (typeof q.q === 'string') filters.query = q.q;
+  if (typeof q.role === 'string') filters.role = q.role;
+  if (typeof q.status === 'string') filters.status = q.status;
+  if (typeof q.page === 'string') page.value = Number(q.page) || 1;
+});
 
 const filteredMembers = computed(() => {
   if (!state.data?.members) return [];
@@ -187,11 +215,30 @@ const filteredMembers = computed(() => {
   });
 });
 
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredMembers.value.length / pageSize.value)));
+const pagedMembers = computed(() => {
+  const start = (page.value - 1) * pageSize.value;
+  return filteredMembers.value.slice(start, start + pageSize.value);
+});
+
 const resetFilters = () => {
   filters.query = '';
   filters.role = '';
   filters.status = '';
+  page.value = 1;
 };
+
+watch([() => filters.query, () => filters.role, () => filters.status, page], () => {
+  router.replace({
+    query: {
+      ...route.query,
+      q: filters.query || undefined,
+      role: filters.role || undefined,
+      status: filters.status || undefined,
+      page: page.value > 1 ? String(page.value) : undefined
+    }
+  });
+});
 
 const toggleForm = () => {
   showForm.value = !showForm.value;
