@@ -120,6 +120,14 @@ function initDb() {
       source TEXT,
       created_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      actor_id TEXT,
+      action TEXT NOT NULL,
+      target TEXT,
+      payload_json TEXT,
+      created_at TEXT NOT NULL
+    );
   `);
 
   ensureColumn('users', 'mode', 'TEXT', 'jobseeker');
@@ -435,6 +443,21 @@ function listLeads(limit = 50, offset = 0) {
     .all(limit, offset);
 }
 
+function addAuditLog(actorId, action, target, payload) {
+  const db = getDb();
+  const createdAt = new Date().toISOString();
+  db.prepare('INSERT INTO audit_logs (actor_id, action, target, payload_json, created_at) VALUES (?, ?, ?, ?, ?)')
+    .run(actorId || null, action, target || null, payload ? JSON.stringify(payload) : null, createdAt);
+  return true;
+}
+
+function listAuditLogs(limit = 50, offset = 0) {
+  const db = getDb();
+  return db.prepare('SELECT id, actor_id, action, target, payload_json, created_at FROM audit_logs ORDER BY id DESC LIMIT ? OFFSET ?')
+    .all(limit, offset)
+    .map(row => ({ ...row, payload: row.payload_json ? JSON.parse(row.payload_json) : null }));
+}
+
 module.exports = {
   initDb,
   getDb,
@@ -472,5 +495,7 @@ module.exports = {
   getB2BUsage,
   incrementB2BUsage,
   createLead,
-  listLeads
+  listLeads,
+  addAuditLog,
+  listAuditLogs
 };

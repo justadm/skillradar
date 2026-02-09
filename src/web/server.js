@@ -20,9 +20,11 @@ const {
   inviteTeamMember,
   updateTeamRole,
   deleteTeamMember,
-  createLead
+  createLead,
+  listLeads,
+  addAuditLog,
+  listAuditLogs
 } = require('../db');
-const { listLeads } = require('../db');
 
 const WEB_PORT = process.env.WEB_PORT || 3000;
 const API_BASE = '/api/v1';
@@ -250,6 +252,7 @@ function buildApiRouter() {
       return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Role is required', details: { field: 'role' } } });
     }
     const report = createReport(req.user.org_id, req.body);
+    addAuditLog(req.user.id, 'report.create', report.id, { role: report.role, type: report.type });
     res.json({ id: report.id, status: report.status });
   });
 
@@ -300,11 +303,13 @@ function buildApiRouter() {
       return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Role is required', details: { field: 'role' } } });
     }
     const role = createRoleProfile(req.user.org_id, req.body, req.user.id);
+    addAuditLog(req.user.id, 'role.create', role.id, { role: role.role });
     res.json(role);
   });
 
   app.delete(`${API_BASE}/roles/:id`, requireAuth, requireRole('admin'), (req, res) => {
     deleteRoleProfile(req.user.org_id, req.params.id);
+    addAuditLog(req.user.id, 'role.delete', req.params.id, {});
     res.json({ status: 'deleted' });
   });
 
@@ -314,6 +319,7 @@ function buildApiRouter() {
       return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Report not found' } });
     }
     deleteReport(req.user.org_id, req.params.id);
+    addAuditLog(req.user.id, 'report.delete', req.params.id, {});
     res.json({ status: 'deleted' });
   });
 
@@ -332,7 +338,9 @@ function buildApiRouter() {
   app.get(`${API_BASE}/team`, requireAuth, requireRole('admin'), (req, res) => {
     const items = listTeam(req.user.org_id);
     res.json({ members: items.map(user => ({
+      id: user.id,
       name: user.name || user.email,
+      email: user.email,
       role: user.role,
       access: user.status === 'invited' ? 'Invitation pending' : 'Active'
     }))});
@@ -345,17 +353,20 @@ function buildApiRouter() {
       return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid email', details: { field: 'email' } } });
     }
     const user = inviteTeamMember(req.user.org_id, email, role);
+    addAuditLog(req.user.id, 'team.invite', user.id, { email, role });
     res.json({ status: 'invited', user });
   });
 
   app.patch(`${API_BASE}/team/:id`, requireAuth, requireRole('admin'), (req, res) => {
     const role = req.body?.role;
     const user = updateTeamRole(req.user.org_id, req.params.id, role);
+    addAuditLog(req.user.id, 'team.role.update', req.params.id, { role });
     res.json({ status: 'updated', user });
   });
 
   app.delete(`${API_BASE}/team/:id`, requireAuth, requireRole('admin'), (req, res) => {
     deleteTeamMember(req.user.org_id, req.params.id);
+    addAuditLog(req.user.id, 'team.delete', req.params.id, {});
     res.json({ status: 'deleted' });
   });
 
@@ -372,11 +383,23 @@ function buildApiRouter() {
   });
 
   app.post(`${API_BASE}/billing/checkout`, requireAuth, requireRole('owner'), (req, res) => {
+    addAuditLog(req.user.id, 'billing.checkout', req.user.org_id, { plan: req.body?.plan || 'unknown' });
     res.json({ url: 'https://example.com/checkout' });
   });
 
   app.post(`${API_BASE}/billing/webhook`, (req, res) => {
     res.json({ status: 'ok' });
+  });
+
+  app.get(`${API_BASE}/audit`, requireAuth, requireRole('admin'), (req, res) => {
+    const limit = Number(req.query.limit || 50);
+    const offset = Number(req.query.offset || 0);
+    const items = listAuditLogs(limit, offset);
+    if (!items.length) {
+      const data = readMock('audit');
+      return res.json({ items: data.items || [], total: (data.items || []).length });
+    }
+    res.json({ items, total: items.length });
   });
 
   return app;

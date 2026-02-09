@@ -1,7 +1,11 @@
 {
+  "current_plan": {"name": "Pro", "price": "$199", "limits": {"reports_per_day": 10, "team_size": 3}},
+  "history": [
+    {"date": "2026-02-01", "amount": "$199", "status": "paid"}
+  ],
   "plans": [
-    {"name": "Starter", "price": "$99", "desc": "До 3 отчётов в месяц, 1 команда.", "cta": "Выбрать"},
-    {"name": "Pro", "price": "$199", "desc": "До 10 отчётов, экспорт CSV/PDF.", "cta": "Текущий", "featured": true},
+    {"name": "Starter", "price": "$99", "desc": "До 3 отчётов в день, 1 команда.", "cta": "Выбрать"},
+    {"name": "Pro", "price": "$199", "desc": "До 10 отчётов в день, экспорт CSV/PDF.", "cta": "Текущий", "featured": true},
     {"name": "Enterprise", "price": "Custom", "desc": "SLA, SSO, кастомные отчёты.", "cta": "Связаться"}
   ]
 }

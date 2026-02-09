@@ -43,16 +43,65 @@
     <div v-if="state.loading" class="alert alert-info">Загружаем команду…</div>
     <div v-if="state.error" class="alert alert-danger">Не удалось загрузить команду.</div>
 
-    <div class="row g-3" v-if="state.data">
-      <div class="col-md-6 col-lg-4" v-for="member in state.data.members" :key="member.name">
-        <div class="card h-100">
-          <div class="card-body">
-            <h3 class="h6">{{ member.name }}</h3>
-            <p class="text-secondary">{{ member.role }} · {{ member.access }}</p>
+    <div class="card" v-if="state.data">
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table align-middle">
+            <thead>
+              <tr>
+                <th>Имя</th>
+                <th>Email</th>
+                <th>Роль</th>
+                <th>Статус</th>
+                <th class="text-end">Действия</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="member in state.data.members" :key="member.id || member.email">
+                <td>{{ member.name }}</td>
+                <td>{{ member.email || '—' }}</td>
+                <td>
+                  <select v-model="member.role" class="form-select form-select-sm" :disabled="!canManageTeam">
+                    <option value="owner">Owner</option>
+                    <option value="admin">Admin</option>
+                    <option value="analyst">Analyst</option>
+                    <option value="viewer">Viewer</option>
+                  </select>
+                </td>
+                <td>{{ member.access }}</td>
+                <td class="text-end">
+                  <button class="btn btn-outline-secondary btn-sm me-2" :disabled="!canManageTeam" @click="saveRole(member)">
+                    Сохранить
+                  </button>
+                  <button class="btn btn-outline-danger btn-sm" :disabled="!canManageTeam" @click="confirmDelete(member)">
+                    Удалить
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showDelete" class="modal fade show" style="display: block;" tabindex="-1" role="dialog">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Удалить участника?</h5>
+            <button type="button" class="btn-close" @click="cancelDelete"></button>
+          </div>
+          <div class="modal-body">
+            <p>{{ pendingDelete?.email || pendingDelete?.name }} будет удалён.</p>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-outline-secondary" @click="cancelDelete">Отмена</button>
+            <button class="btn btn-danger" @click="performDelete">Удалить</button>
           </div>
         </div>
       </div>
     </div>
+    <div v-if="showDelete" class="modal-backdrop fade show"></div>
   </div>
 </template>
 
@@ -75,16 +124,21 @@ const state = reactive<{ loading: boolean; error: boolean; data: any | null }>({
 const showForm = ref(false);
 const formMessage = ref('');
 const form = reactive({ email: '', role: 'analyst' });
+const showDelete = ref(false);
+const pendingDelete = ref<any | null>(null);
 
-onMounted(async () => {
+const loadTeam = async () => {
   try {
+    state.loading = true;
     state.data = await api.getTeam();
   } catch {
     state.error = true;
   } finally {
     state.loading = false;
   }
-});
+};
+
+onMounted(loadTeam);
 
 const toggleForm = () => {
   showForm.value = !showForm.value;
@@ -107,9 +161,51 @@ const submit = async () => {
     formMessage.value = 'Приглашение отправлено.';
     showForm.value = false;
     pushToast('Приглашение отправлено.', 'success');
+    await loadTeam();
   } catch {
     formMessage.value = 'Не удалось отправить приглашение.';
     pushToast('Не удалось отправить приглашение.', 'danger');
+  }
+};
+
+const saveRole = async (member: any) => {
+  if (!canManageTeam.value) return;
+  if (!member?.id) {
+    pushToast('Не удалось определить пользователя.', 'danger');
+    return;
+  }
+  try {
+    await api.updateTeamRole(member.id, { role: member.role });
+    pushToast('Роль обновлена.', 'success');
+  } catch {
+    pushToast('Не удалось обновить роль.', 'danger');
+  }
+};
+
+const confirmDelete = (member: any) => {
+  pendingDelete.value = member;
+  showDelete.value = true;
+};
+
+const cancelDelete = () => {
+  showDelete.value = false;
+  pendingDelete.value = null;
+};
+
+const performDelete = async () => {
+  if (!pendingDelete.value?.id) {
+    pushToast('Не удалось определить пользователя.', 'danger');
+    cancelDelete();
+    return;
+  }
+  try {
+    await api.deleteTeamMember(pendingDelete.value.id);
+    pushToast('Участник удалён.', 'success');
+    await loadTeam();
+  } catch {
+    pushToast('Не удалось удалить участника.', 'danger');
+  } finally {
+    cancelDelete();
   }
 };
 

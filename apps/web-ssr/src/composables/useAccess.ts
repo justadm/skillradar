@@ -23,6 +23,7 @@ export function useAccess() {
   const canDeleteReports = computed(() => rank.value >= 2);
   const canDeleteRoles = computed(() => rank.value >= 2);
   const canViewLeads = computed(() => rank.value >= 2);
+  const canViewAudit = computed(() => rank.value >= 2);
 
   return {
     role,
@@ -34,6 +35,7 @@ export function useAccess() {
     canManageSettings,
     canDeleteReports,
     canDeleteRoles,
-    canViewLeads
+    canViewLeads,
+    canViewAudit
   };
 }

@@ -47,6 +47,21 @@ async function apiDelete<T>(path: string): Promise<T> {
   return res.json();
 }
 
+async function apiPatch<T>(path: string, body: unknown): Promise<T> {
+  const { token } = useAuth();
+  if (!token.value) throw new Error('UNAUTHORIZED');
+  const res = await fetch(`${apiBase}/${path}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token.value}`
+    },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error('API_ERROR');
+  return res.json();
+}
+
 async function apiDownload(path: string): Promise<Blob> {
   const { token } = useAuth();
   if (!token.value) throw new Error('UNAUTHORIZED');
@@ -71,11 +86,15 @@ export function useApi() {
     getSettings: () => apiGet('settings'),
     getMe: () => apiGet('me'),
     getLeads: () => apiGet('leads'),
+    getAudit: () => apiGet('audit'),
     createReport: (payload: any) => apiPost('reports', payload),
     deleteReport: (id: string) => apiDelete(`reports/${id}`),
     exportReport: (id: string, format: 'pdf' | 'csv' = 'pdf') => apiDownload(`reports/${id}/export?format=${format}`),
     createRole: (payload: any) => apiPost('roles', payload),
     inviteTeam: (payload: any) => apiPost('team/invite', payload),
-    deleteRole: (id: string) => apiDelete(`roles/${id}`)
+    updateTeamRole: (id: string, payload: any) => apiPatch(`team/${id}`, payload),
+    deleteTeamMember: (id: string) => apiDelete(`team/${id}`),
+    deleteRole: (id: string) => apiDelete(`roles/${id}`),
+    startCheckout: (plan: string) => apiPost('billing/checkout', { plan })
   };
 }

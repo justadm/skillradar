@@ -19,6 +19,7 @@ import PortalTeam from './pages/portal/PortalTeam.vue';
 import PortalBilling from './pages/portal/PortalBilling.vue';
 import PortalSettings from './pages/portal/PortalSettings.vue';
 import PortalLeads from './pages/portal/PortalLeads.vue';
+import PortalAudit from './pages/portal/PortalAudit.vue';
 
 const routes: RouteRecordRaw[] = [
   {
@@ -47,6 +48,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'template', component: PortalTemplate },
       { path: 'team', component: PortalTeam },
       { path: 'leads', component: PortalLeads },
+      { path: 'audit', component: PortalAudit },
       { path: 'billing', component: PortalBilling },
       { path: 'settings', component: PortalSettings }
     ]
