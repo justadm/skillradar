@@ -1,6 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const express = require('express');
+const PDFDocument = require('pdfkit');
 const {
   createAuthToken,
   consumeAuthToken,
@@ -17,7 +18,8 @@ const {
   listTeam,
   inviteTeamMember,
   updateTeamRole,
-  deleteTeamMember
+  deleteTeamMember,
+  createLead
 } = require('../db');
 
 const WEB_PORT = process.env.WEB_PORT || 3000;
@@ -28,6 +30,35 @@ const STATIC_DIR = path.join(__dirname, '../../web');
 function readMock(name) {
   const file = path.join(DATA_DIR, `${name}.json`);
   return JSON.parse(fs.readFileSync(file, 'utf8'));
+}
+
+function buildReportPdf(report) {
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({ size: 'A4', margin: 50 });
+      const chunks = [];
+      doc.on('data', chunk => chunks.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.fontSize(18).text(`Отчет: ${report.role}`, { align: 'left' });
+      doc.moveDown();
+      doc.fontSize(12).text(`Тип: ${report.type}`);
+      doc.text(`Город: ${report.city || '—'}`);
+      doc.text(`Уровень: ${report.level || '—'}`);
+      doc.text(`Дата: ${report.created_at?.slice(0, 10) || '—'}`);
+      doc.moveDown();
+      doc.text('Краткая сводка:');
+      if (report.stats) {
+        doc.text(`Вакансий: ${report.stats.total_found || report.stats.vacancies || '—'}`);
+        doc.text(`Удаленка: ${report.stats.remote_share || '—'}%`);
+        doc.text(`Вилка: ${report.stats.salary_from_avg || '—'}–${report.stats.salary_to_avg || '—'} RUR`);
+      } else {
+        doc.text('Данные будут доступны после полного расчета.');
+      }
+      doc.end();
+    } catch (err) {
+      reject(err);
+    }
+  });
 }
 
 function requireAuth(req, res, next) {
@@ -85,6 +116,20 @@ function buildApiRouter() {
     res.json({ user: req.user });
   });
 
+  app.post(`${API_BASE}/leads`, (req, res) => {
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    if (!email || !email.includes('@')) {
+      return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid email', details: { field: 'email' } } });
+    }
+    const lead = createLead({
+      company: String(req.body?.company || '').trim(),
+      email,
+      message: String(req.body?.message || '').trim(),
+      source: String(req.body?.source || 'web').trim()
+    });
+    res.json({ status: 'ok', lead });
+  });
+
   app.get(`${API_BASE}/reports`, requireAuth, (req, res) => {
     const limit = Number(req.query.limit || 20);
     const offset = Number(req.query.offset || 0);
@@ -122,8 +167,26 @@ function buildApiRouter() {
     res.json(report);
   });
 
-  app.get(`${API_BASE}/reports/:id/export`, requireAuth, (req, res) => {
-    res.json({ status: 'todo', message: 'Export will be implemented later.' });
+  app.get(`${API_BASE}/reports/:id/export`, requireAuth, async (req, res) => {
+    const report = getReport(req.user.org_id, req.params.id);
+    if (!report) {
+      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Report not found' } });
+    }
+    const format = String(req.query.format || 'pdf').toLowerCase();
+    if (format === 'csv') {
+      const csv = [
+        'id,role,type,city,level,created_at,status',
+        `${report.id},"${report.role}",${report.type},${report.city || ''},${report.level || ''},${report.created_at},${report.status}`
+      ].join('\n');
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename=\"report-${report.id}.csv\"`);
+      res.send(csv);
+      return;
+    }
+    const pdf = await buildReportPdf(report);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=\"report-${report.id}.pdf\"`);
+    res.send(pdf);
   });
 
   app.get(`${API_BASE}/roles`, requireAuth, (req, res) => {

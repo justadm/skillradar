@@ -47,6 +47,18 @@ async function apiDelete<T>(path: string): Promise<T> {
   return res.json();
 }
 
+async function apiDownload(path: string): Promise<Blob> {
+  const { token } = useAuth();
+  if (!token.value) throw new Error('UNAUTHORIZED');
+  const res = await fetch(`${apiBase}/${path}`, {
+    headers: {
+      Authorization: `Bearer ${token.value}`
+    }
+  });
+  if (!res.ok) throw new Error('API_ERROR');
+  return res.blob();
+}
+
 export function useApi() {
   return {
     getDashboard: () => apiGet('dashboard'),
@@ -59,6 +71,7 @@ export function useApi() {
     getSettings: () => apiGet('settings'),
     createReport: (payload: any) => apiPost('reports', payload),
     deleteReport: (id: string) => apiDelete(`reports/${id}`),
+    exportReport: (id: string, format: 'pdf' | 'csv' = 'pdf') => apiDownload(`reports/${id}/export?format=${format}`),
     createRole: (payload: any) => apiPost('roles', payload),
     inviteTeam: (payload: any) => apiPost('team/invite', payload),
     deleteRole: (id: string) => apiDelete(`roles/${id}`)

@@ -16,12 +16,16 @@
           </div>
         </div>
       </div>
+      <div class="mt-4">
+        <RouterLink class="btn btn-primary" to="/pricing">Подключить пилот</RouterLink>
+      </div>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
 import { useHead } from '../composables/useHead';
+import { RouterLink } from 'vue-router';
 
 const items = [
   { title: 'B2B‑режим: сегменты и тренды', desc: 'Добавили сегментацию по городам и уровням.', date: '2026‑02‑09', tag: 'Release' },

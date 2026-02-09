@@ -20,6 +20,11 @@
           </div>
         </div>
       </div>
+
+      <div class="mt-4 d-flex flex-wrap gap-2">
+        <RouterLink class="btn btn-outline-secondary" to="/b2b">Как строим отчеты</RouterLink>
+        <RouterLink class="btn btn-primary" to="/pricing">Запросить доступ</RouterLink>
+      </div>
     </div>
   </section>
 </template>

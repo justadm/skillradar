@@ -67,6 +67,33 @@
       </div>
     </div>
   </section>
+
+  <section class="py-5">
+    <div class="container">
+      <div class="row g-4">
+        <div class="col-lg-6">
+          <h2 class="h4 fw-semibold">Кому полезно</h2>
+          <ul class="text-secondary">
+            <li>HR‑командам — оценка рынка перед наймом</li>
+            <li>Recruiter lead — конкурентный анализ</li>
+            <li>Hiring managers — подготовка требований</li>
+          </ul>
+        </div>
+        <div class="col-lg-6">
+          <div class="card">
+            <div class="card-body">
+              <h3 class="h6">Ключевые KPI</h3>
+              <ul class="mb-0">
+                <li>Скорость подготовки отчёта: 2–5 мин</li>
+                <li>Сегментация: город/уровень/формат</li>
+                <li>Экспорт: PDF/TXT</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 </template>
 
 <script setup lang="ts">

@@ -112,6 +112,14 @@ function initDb() {
       count INTEGER NOT NULL DEFAULT 0,
       UNIQUE(user_id, day)
     );
+    CREATE TABLE IF NOT EXISTS leads (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      company TEXT,
+      email TEXT NOT NULL,
+      message TEXT,
+      source TEXT,
+      created_at TEXT NOT NULL
+    );
   `);
 
   ensureColumn('users', 'mode', 'TEXT', 'jobseeker');
@@ -409,6 +417,18 @@ function incrementB2BUsage(userId, dayKey) {
   return next;
 }
 
+function createLead(payload) {
+  const db = getDb();
+  const company = payload.company || '';
+  const email = String(payload.email || '').trim().toLowerCase();
+  const message = payload.message || '';
+  const source = payload.source || 'unknown';
+  const createdAt = new Date().toISOString();
+  db.prepare('INSERT INTO leads (company, email, message, source, created_at) VALUES (?, ?, ?, ?, ?)')
+    .run(company, email, message, source, createdAt);
+  return { email, source, created_at: createdAt };
+}
+
 module.exports = {
   initDb,
   getDb,
@@ -444,5 +464,6 @@ module.exports = {
   updateTeamRole,
   deleteTeamMember,
   getB2BUsage,
-  incrementB2BUsage
+  incrementB2BUsage,
+  createLead
 };
