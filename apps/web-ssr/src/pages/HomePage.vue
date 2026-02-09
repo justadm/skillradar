@@ -10,7 +10,7 @@
             Для HR — быстрые отчёты по роли, навыкам, зарплатам и конкурентам.
           </p>
           <div class="d-flex flex-wrap gap-2">
-            <a class="btn btn-primary btn-lg" href="#launch">Запустить пилот</a>
+            <RouterLink class="btn btn-primary btn-lg" to="/pricing">Запустить пилот</RouterLink>
             <a class="btn btn-outline-secondary btn-lg" href="https://t.me/skillradar_hr_bot" target="_blank" rel="noreferrer">
               Открыть в Telegram
             </a>
@@ -71,6 +71,7 @@
 
 <script setup lang="ts">
 import { useHead } from '../composables/useHead';
+import { RouterLink } from 'vue-router';
 
 useHead(`
   <title>SkillRadar — умный подбор вакансий и HR‑аналитика</title>

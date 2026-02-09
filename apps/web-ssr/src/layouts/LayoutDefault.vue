@@ -14,14 +14,17 @@
           </button>
           <div class="collapse navbar-collapse" id="mainNav">
             <ul class="navbar-nav me-auto">
-              <li class="nav-item"><a class="nav-link" href="#product">Продукт</a></li>
-              <li class="nav-item"><a class="nav-link" href="#b2b">B2B</a></li>
-              <li class="nav-item"><a class="nav-link" href="#how">Как работает</a></li>
-              <li class="nav-item"><a class="nav-link" href="#faq">FAQ</a></li>
+              <li class="nav-item"><RouterLink class="nav-link" to="/">Продукт</RouterLink></li>
+              <li class="nav-item"><RouterLink class="nav-link" to="/b2b">B2B</RouterLink></li>
+              <li class="nav-item"><RouterLink class="nav-link" to="/reports">Отчёты</RouterLink></li>
+              <li class="nav-item"><RouterLink class="nav-link" to="/pricing">Тарифы</RouterLink></li>
+              <li class="nav-item"><RouterLink class="nav-link" to="/news">Новости</RouterLink></li>
+              <li class="nav-item"><RouterLink class="nav-link" to="/faq">FAQ</RouterLink></li>
+              <li class="nav-item"><RouterLink class="nav-link" to="/contacts">Контакты</RouterLink></li>
             </ul>
             <div class="d-flex gap-2">
               <RouterLink class="btn btn-outline-secondary" to="/login">Войти</RouterLink>
-              <a class="btn btn-primary" href="#launch">Запросить доступ</a>
+              <RouterLink class="btn btn-primary" to="/pricing">Запросить доступ</RouterLink>
             </div>
           </div>
         </div>
