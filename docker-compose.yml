@@ -53,10 +53,13 @@ services:
     depends_on:
       - web
       - bot
+      - nginx
     environment:
       - ALERT_URL=http://web:3000
       - ALERT_INTERVAL=60
       - ALERT_BOT_CONTAINER=skillradar-bot
+      - ALERT_NGINX_CONTAINER=skillradar-nginx
+      - ALERT_ON_5XX=true
       - ALERT_TG_BOT_TOKEN=${ALERT_TG_BOT_TOKEN}
       - ALERT_TG_CHAT_ID=${ALERT_TG_CHAT_ID}
     volumes:
