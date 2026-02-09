@@ -48,16 +48,19 @@ services:
     restart: unless-stopped
 
   monitor:
-    image: alpine:3.20
+    image: docker:24-cli
     container_name: skillradar-monitor
     depends_on:
       - web
+      - bot
     environment:
       - ALERT_URL=http://web:3000
       - ALERT_INTERVAL=60
+      - ALERT_BOT_CONTAINER=skillradar-bot
       - ALERT_TG_BOT_TOKEN=${ALERT_TG_BOT_TOKEN}
       - ALERT_TG_CHAT_ID=${ALERT_TG_CHAT_ID}
     volumes:
       - ./deploy/monitor/healthcheck.sh:/healthcheck.sh:ro
-    command: [\"/bin/sh\", \"/healthcheck.sh\"]
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: ["/bin/sh", "/healthcheck.sh"]
     restart: unless-stopped

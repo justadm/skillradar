@@ -264,6 +264,7 @@ ALERT_TG_BOT_TOKEN=
 ALERT_TG_CHAT_ID=
 ALERT_URL=http://web:3000
 ALERT_INTERVAL=60
+ALERT_BOT_CONTAINER=skillradar-bot
 ```
 
 ### Systemd (docker compose)
