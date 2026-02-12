@@ -2,6 +2,7 @@ const { Telegraf, Markup } = require('telegraf');
 const PDFDocument = require('pdfkit');
 const { parseCriteria, explainFits, marketComment } = require('../llm/openai');
 const { searchVacancies } = require('../hh/client');
+const { getHhConnectionStatus } = require('../hh/oauth');
 const { criteriaToSearchParams } = require('../hh/mappers');
 const { rankVacancies } = require('../score/scoring');
 const { computeMarketStats } = require('../market/market');
@@ -679,6 +680,7 @@ function startBot() {
   const bot = new Telegraf(BOT_TOKEN);
 
   bot.command('status', async ctx => {
+    const hh = getHhConnectionStatus();
     const uptimeSec = Math.floor((Date.now() - STARTED_AT) / 1000);
     const hours = Math.floor(uptimeSec / 3600);
     const minutes = Math.floor((uptimeSec % 3600) / 60);
@@ -689,6 +691,9 @@ function startBot() {
       `Uptime: ${uptime}`,
       `HH area: ${process.env.HH_AREA_DEFAULT || '113'}`,
       `HH cache TTL: ${process.env.HH_CACHE_TTL_MS || '21600000'}`,
+      `HH connected: ${hh.connected ? 'yes' : 'no'}`,
+      `HH token expires: ${hh.expires_at || 'n/a'}`,
+      `HH last success: ${hh.last_success_at || 'n/a'}`,
       `LLM cache TTL: ${process.env.LLM_CACHE_TTL_MS || '86400000'}`,
       `USE_MOCKS: ${String(process.env.USE_MOCKS || 'false')}`,
       `DB: ${process.env.DB_PATH ? 'configured' : 'data/db.sqlite'}`
@@ -748,11 +753,16 @@ function startBot() {
       await ctx.reply('Недостаточно прав.');
       return;
     }
+    const hh = getHhConnectionStatus();
     const msg = [
       '<b>SkillRadar debug</b>',
       `NODE_ENV: ${process.env.NODE_ENV || 'development'}`,
       `HH area: ${process.env.HH_AREA_DEFAULT || '113'}`,
       `HH cache TTL: ${process.env.HH_CACHE_TTL_MS || '21600000'}`,
+      `HH connected: ${hh.connected ? 'yes' : 'no'}`,
+      `HH token expires: ${hh.expires_at || 'n/a'}`,
+      `HH last success: ${hh.last_success_at || 'n/a'}`,
+      `HH last error: ${hh.last_error || 'n/a'}`,
       `LLM cache TTL: ${process.env.LLM_CACHE_TTL_MS || '86400000'}`,
       `USE_MOCKS: ${String(process.env.USE_MOCKS || 'false')}`
     ].join('\n');

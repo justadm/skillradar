@@ -3,6 +3,8 @@ const fs = require('fs');
 const express = require('express');
 const PDFDocument = require('pdfkit');
 const nodemailer = require('nodemailer');
+const { randomUUID } = require('crypto');
+const { getHhConnectionStatus, getAuthorizeUrl, exchangeCodeForToken } = require('../hh/oauth');
 const {
   createAuthToken,
   consumeAuthToken,
@@ -39,6 +41,7 @@ const WEB_PORT = process.env.WEB_PORT || 3000;
 const API_BASE = '/api/v1';
 const DATA_DIR = path.join(__dirname, '../../web/data');
 const STATIC_DIR = path.join(__dirname, '../../web');
+const hhOauthState = new Map();
 
 function readMock(name) {
   const file = path.join(DATA_DIR, `${name}.json`);
@@ -233,6 +236,29 @@ function requireRole(minRole) {
 function buildApiRouter() {
   const app = express.Router();
 
+  app.get('/oauth/hh/callback', async (req, res) => {
+    const code = String(req.query.code || '');
+    const state = String(req.query.state || '');
+    const error = String(req.query.error || '');
+    if (error) {
+      return res.status(400).send(`HH OAuth error: ${error}`);
+    }
+    if (!code || !state || !hhOauthState.has(state)) {
+      return res.status(400).send('Invalid HH OAuth callback state.');
+    }
+    const expiresAt = hhOauthState.get(state);
+    hhOauthState.delete(state);
+    if (!expiresAt || expiresAt < Date.now()) {
+      return res.status(400).send('HH OAuth state expired.');
+    }
+    try {
+      await exchangeCodeForToken(code);
+      res.redirect('/portal/settings?hh=connected');
+    } catch (err) {
+      res.status(500).send(`HH token exchange failed: ${String(err.message || err)}`);
+    }
+  });
+
   app.get(`${API_BASE}/dashboard`, requireAuth, (req, res) => {
     const reports = listReports(req.user.org_id, 3, 0);
     const data = readMock('dashboard');
@@ -273,6 +299,20 @@ function buildApiRouter() {
 
   app.get(`${API_BASE}/me`, requireAuth, (req, res) => {
     res.json({ user: req.user });
+  });
+
+  app.get(`${API_BASE}/hh/status`, requireAuth, requireRole('admin'), (req, res) => {
+    res.json(getHhConnectionStatus());
+  });
+
+  app.post(`${API_BASE}/hh/oauth/start`, requireAuth, requireRole('admin'), (req, res) => {
+    const status = getHhConnectionStatus();
+    if (!status.configured) {
+      return res.status(400).json({ error: { code: 'HH_NOT_CONFIGURED', message: 'Set HH_CLIENT_ID / HH_CLIENT_SECRET / HH_REDIRECT_URI' } });
+    }
+    const state = randomUUID();
+    hhOauthState.set(state, Date.now() + 10 * 60 * 1000);
+    res.json({ url: getAuthorizeUrl(state) });
   });
 
   app.post(`${API_BASE}/leads`, async (req, res) => {
@@ -546,7 +586,12 @@ function buildApiRouter() {
   });
 
   app.get(`${API_BASE}/settings`, requireAuth, requireRole('admin'), (req, res) => {
-    res.json(readMock('settings'));
+    const base = readMock('settings');
+    res.json({
+      ...base,
+      hh: getHhConnectionStatus(),
+      use_mocks: String(process.env.USE_MOCKS || 'false')
+    });
   });
 
   app.post(`${API_BASE}/billing/checkout`, requireAuth, requireRole('owner'), (req, res) => {

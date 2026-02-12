@@ -13,6 +13,7 @@
 ### Интеграции
 - [x] HH API клиент (vacancies, vacancy details).
 - [x] OpenAI клиент (парсер + объяснение + рынок).
+- [x] HH OAuth (start/callback/token exchange) + статус токена в `/status` и ЛК.
 
 ### Данные
 - [x] SQLite схема и репозитории.

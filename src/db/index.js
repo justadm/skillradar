@@ -130,6 +130,18 @@ function initDb() {
       payload_json TEXT,
       created_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS hh_tokens (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      access_token TEXT,
+      refresh_token TEXT,
+      token_type TEXT,
+      expires_at TEXT,
+      scope TEXT,
+      obtained_at TEXT,
+      last_success_at TEXT,
+      last_error_at TEXT,
+      last_error TEXT
+    );
   `);
 
   ensureColumn('users', 'mode', 'TEXT', 'jobseeker');
@@ -651,6 +663,51 @@ function countAuditLogs(filters = {}) {
   return db.prepare(`SELECT COUNT(*) as cnt FROM audit_logs ${where}`).get(...params).cnt;
 }
 
+function saveHhToken(payload) {
+  const db = getDb();
+  const now = new Date().toISOString();
+  const expiresAt = payload.expires_in
+    ? new Date(Date.now() + Number(payload.expires_in) * 1000).toISOString()
+    : payload.expires_at || null;
+  db.prepare(`
+    INSERT INTO hh_tokens (id, access_token, refresh_token, token_type, expires_at, scope, obtained_at, last_error, last_error_at)
+    VALUES (1, ?, ?, ?, ?, ?, ?, NULL, NULL)
+    ON CONFLICT(id) DO UPDATE SET
+      access_token=excluded.access_token,
+      refresh_token=excluded.refresh_token,
+      token_type=excluded.token_type,
+      expires_at=excluded.expires_at,
+      scope=excluded.scope,
+      obtained_at=excluded.obtained_at,
+      last_error=NULL,
+      last_error_at=NULL
+  `).run(
+    payload.access_token || null,
+    payload.refresh_token || null,
+    payload.token_type || null,
+    expiresAt,
+    payload.scope || null,
+    now
+  );
+}
+
+function getHhToken() {
+  const db = getDb();
+  return db.prepare('SELECT * FROM hh_tokens WHERE id = 1').get() || null;
+}
+
+function markHhApiSuccess() {
+  const db = getDb();
+  db.prepare('UPDATE hh_tokens SET last_success_at = ?, last_error = NULL, last_error_at = NULL WHERE id = 1')
+    .run(new Date().toISOString());
+}
+
+function markHhApiError(errorText) {
+  const db = getDb();
+  db.prepare('UPDATE hh_tokens SET last_error = ?, last_error_at = ? WHERE id = 1')
+    .run(String(errorText || 'Unknown error').slice(0, 512), new Date().toISOString());
+}
+
 module.exports = {
   initDb,
   getDb,
@@ -699,5 +756,9 @@ module.exports = {
   listAuditLogs,
   listAuditLogsFiltered,
   countAuditLogs,
-  updateLead
+  updateLead,
+  saveHhToken,
+  getHhToken,
+  markHhApiSuccess,
+  markHhApiError
 };

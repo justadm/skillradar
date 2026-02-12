@@ -87,6 +87,7 @@ export function useApi() {
     getTeam: (params?: Record<string, string | number | undefined>) => apiGet('team', params),
     getBilling: () => apiGet('billing'),
     getSettings: () => apiGet('settings'),
+    getHhStatus: () => apiGet('hh/status'),
     getMe: () => apiGet('me'),
     getLeads: (params?: Record<string, string | number | undefined>) => apiGet('leads', params),
     getAudit: (params?: Record<string, string | number | undefined>) => apiGet('audit', params),
@@ -99,6 +100,7 @@ export function useApi() {
     deleteTeamMember: (id: string) => apiDelete(`team/${id}`),
     deleteRole: (id: string) => apiDelete(`roles/${id}`),
     startCheckout: (plan: string) => apiPost('billing/checkout', { plan }),
+    startHhOauth: () => apiPost<{ url: string }>('hh/oauth/start', {}),
     updateLead: (id: string, payload: any) => apiPatch(`leads/${id}`, payload)
   };
 }

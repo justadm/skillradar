@@ -35,15 +35,34 @@
           </div>
         </div>
       </div>
+      <div class="col-12">
+        <div class="card h-100">
+          <div class="card-body">
+            <h3 class="h6">Интеграция HH.ru</h3>
+            <p class="text-secondary mb-1">Настроено: {{ state.data.hh?.configured ? 'Да' : 'Нет' }}</p>
+            <p class="text-secondary mb-1">Подключено: {{ state.data.hh?.connected ? 'Да' : 'Нет' }}</p>
+            <p class="text-secondary mb-1">Токен до: {{ state.data.hh?.expires_at || 'n/a' }}</p>
+            <p class="text-secondary mb-1">Последний успешный запрос: {{ state.data.hh?.last_success_at || 'n/a' }}</p>
+            <p class="text-secondary mb-3">Последняя ошибка: {{ state.data.hh?.last_error || 'n/a' }}</p>
+            <div class="d-flex gap-2">
+              <button class="btn btn-primary btn-sm" :disabled="oauthLoading || !state.data.hh?.configured" @click="connectHh">
+                {{ oauthLoading ? 'Переход...' : 'Подключить HH OAuth' }}
+              </button>
+              <button class="btn btn-outline-secondary btn-sm" @click="reloadSettings">Обновить статус</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive } from 'vue';
+import { onMounted, reactive, ref } from 'vue';
 import { useApi } from '../../composables/useApi';
 import { useAccess } from '../../composables/useAccess';
 import { useHead } from '../../composables/useHead';
+import { pushToast } from '../../composables/useToast';
 
 const api = useApi();
 const { canManageSettings } = useAccess();
@@ -52,16 +71,33 @@ const state = reactive<{ loading: boolean; error: boolean; data: any | null }>({
   error: false,
   data: null
 });
+const oauthLoading = ref(false);
 
-onMounted(async () => {
+const reloadSettings = async () => {
   try {
+    state.loading = true;
+    state.error = false;
     state.data = await api.getSettings();
   } catch {
     state.error = true;
   } finally {
     state.loading = false;
   }
-});
+};
+
+const connectHh = async () => {
+  try {
+    oauthLoading.value = true;
+    const res = await api.startHhOauth();
+    window.location.href = res.url;
+  } catch {
+    pushToast('Не удалось запустить HH OAuth.', 'danger');
+  } finally {
+    oauthLoading.value = false;
+  }
+};
+
+onMounted(reloadSettings);
 
 useHead(`
   <title>SkillRadar — Настройки</title>
