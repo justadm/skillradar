@@ -22,6 +22,8 @@ import PortalLeads from './pages/portal/PortalLeads.vue';
 import PortalAudit from './pages/portal/PortalAudit.vue';
 
 const routes: RouteRecordRaw[] = [
+  { path: '/admin', redirect: '/portal/settings' },
+  { path: '/admin/owner', redirect: '/portal/settings' },
   {
     path: '/',
     component: LayoutDefault,

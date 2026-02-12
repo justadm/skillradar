@@ -54,7 +54,7 @@
             </div>
           </aside>
           <section class="col-lg-10">
-            <slot />
+            <RouterView />
           </section>
         </div>
       </div>
@@ -65,7 +65,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
-import { RouterLink } from 'vue-router';
+import { RouterLink, RouterView } from 'vue-router';
 import { useAuth } from '../composables/useAuth';
 import { useUser } from '../composables/useUser';
 import { useAccess } from '../composables/useAccess';

@@ -32,7 +32,7 @@
     </header>
 
     <main>
-      <slot />
+      <RouterView />
     </main>
 
     <footer class="border-top py-4">
@@ -45,5 +45,5 @@
 </template>
 
 <script setup lang="ts">
-import { RouterLink } from 'vue-router';
+import { RouterLink, RouterView } from 'vue-router';
 </script>

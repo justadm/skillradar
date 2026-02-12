@@ -6,9 +6,9 @@ export default defineConfig({
   root: path.resolve(__dirname),
   plugins: [vue()],
   resolve: {
-    alias: {
-      vue: 'vue/dist/vue.esm-bundler.js'
-    }
+    alias: [
+      { find: /^vue$/, replacement: 'vue/dist/vue.esm-bundler.js' }
+    ]
   },
   server: {
     allowedHosts: ['sbdb.loc', 'localhost', '127.0.0.1']

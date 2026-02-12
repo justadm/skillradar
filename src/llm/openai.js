@@ -8,8 +8,9 @@ const modelMain = process.env.OPENAI_MODEL_MAIN || 'gpt-4.1-mini';
 const modelMarket = process.env.OPENAI_MODEL_MARKET || 'gpt-4.1-nano';
 const LLM_CACHE_TTL_MS = Number(process.env.LLM_CACHE_TTL_MS || 24 * 60 * 60 * 1000);
 const USE_MOCKS = String(process.env.USE_MOCKS || '').toLowerCase() === 'true';
+const USE_LLM_MOCKS = USE_MOCKS || !apiKey;
 
-const client = new OpenAI({ apiKey });
+const client = USE_LLM_MOCKS ? null : new OpenAI({ apiKey });
 
 const CriteriaSchema = z.object({
   role: z.string().optional().default(''),
@@ -62,7 +63,7 @@ function setCacheJson(cacheKey, value) {
 }
 
 async function parseCriteria(rawText) {
-  if (USE_MOCKS) {
+  if (USE_LLM_MOCKS) {
     const text = String(rawText || '');
     const num = text.match(/(\d{2,6})/);
     const amount = num ? Number(num[1]) : 0;
@@ -107,7 +108,7 @@ async function parseCriteria(rawText) {
 
 async function explainFits(vacancies, criteria) {
   if (!vacancies.length) return {};
-  if (USE_MOCKS) {
+  if (USE_LLM_MOCKS) {
     const res = {};
     for (const v of vacancies) {
       res[v.id] = 'Совпадают навыки и уровень, зарплата близка к ожиданиям.';
@@ -167,7 +168,7 @@ async function explainFits(vacancies, criteria) {
 }
 
 async function marketComment(stats, query) {
-  if (USE_MOCKS) {
+  if (USE_LLM_MOCKS) {
     return 'Рынок выглядит стабильным: спрос есть, по зарплатам — средний уровень.';
   }
   const system = 'Сделай короткий аналитический комментарий (1-2 предложения). Без воды.';
