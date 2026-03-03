@@ -21,6 +21,9 @@ send_alert() {
 check_container() {
   name="$1"
   label="$2"
+  if [ -z "$name" ]; then
+    return 0
+  fi
   if ! command -v docker >/dev/null 2>&1; then
     return 0
   fi

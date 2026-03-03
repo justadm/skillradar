@@ -10,7 +10,7 @@ services:
       - ./:/app
       - /app/node_modules
     ports:
-      - "3000:3000"
+      - "127.0.0.1:${WEB_HOST_PORT:-13001}:3000"
 
   bot:
     environment:
