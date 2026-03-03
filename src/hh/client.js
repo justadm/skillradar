@@ -68,7 +68,70 @@ async function getVacancy(vacancyId) {
   }
 }
 
+async function getAreas() {
+  if (isMocksEnabled()) {
+    return [
+      { id: '113', name: 'Россия' },
+      { id: '1', name: 'Москва' }
+    ];
+  }
+  try {
+    const url = buildUrl('/areas');
+    return await getJson(url);
+  } catch (err) {
+    markHhApiError(err.message);
+    return [];
+  }
+}
+
+async function getProfessionalRoles() {
+  if (isMocksEnabled()) {
+    return {
+      categories: [
+        {
+          id: '11',
+          name: 'Информационные технологии',
+          roles: [
+            { id: '96', name: 'Программист, разработчик' },
+            { id: '164', name: 'Продуктовый аналитик' }
+          ]
+        }
+      ]
+    };
+  }
+  try {
+    const url = buildUrl('/professional_roles');
+    return await getJson(url);
+  } catch (err) {
+    markHhApiError(err.message);
+    return { categories: [] };
+  }
+}
+
+async function suggestSkills(text, limit = 10) {
+  const query = String(text || '').trim();
+  if (!query) return [];
+  if (isMocksEnabled()) {
+    return ['React', 'Node.js', 'TypeScript'].filter(s => s.toLowerCase().includes(query.toLowerCase())).slice(0, limit);
+  }
+  try {
+    const url = buildUrl('/suggests/skill_set', { text: query });
+    const data = await getJson(url);
+    const items = Array.isArray(data?.items) ? data.items : [];
+    return items
+      .map(item => String(item?.text || '').trim())
+      .filter(Boolean)
+      .slice(0, limit);
+  } catch (err) {
+    markHhApiError(err.message);
+    return [];
+  }
+}
+
 module.exports = {
   searchVacancies,
-  getVacancy
+  getVacancy,
+  getAreas,
+  getProfessionalRoles,
+  suggestSkills
 };

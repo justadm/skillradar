@@ -6,6 +6,7 @@ const nodemailer = require('nodemailer');
 const { z } = require('zod');
 const { randomUUID } = require('crypto');
 const { getHhConnectionStatus, getAuthorizeUrl, exchangeCodeForToken } = require('../hh/oauth');
+const { getAreas, getProfessionalRoles, suggestSkills } = require('../hh/client');
 const {
   createAuthToken,
   consumeAuthToken,
@@ -103,6 +104,11 @@ const TeamInviteSchema = z.object({
 const TeamRolePatchSchema = z.object({
   role: z.enum(['viewer', 'analyst', 'admin', 'owner'])
 }).strict();
+
+const SkillSuggestSchema = z.object({
+  text: z.string().trim().min(1).max(100),
+  limit: z.coerce.number().int().min(1).max(50).optional().default(10)
+});
 
 const AuditFiltersSchema = z.object({
   q: z.string().trim().max(200).optional().default(''),
@@ -554,6 +560,23 @@ function buildApiRouter() {
     const state = randomUUID();
     hhOauthState.set(state, Date.now() + 10 * 60 * 1000);
     res.json({ url: getAuthorizeUrl(state) });
+  });
+
+  app.get(`${API_BASE}/hh/areas`, requireAuth, requireRole('analyst'), async (req, res) => {
+    const areas = await getAreas();
+    res.json({ items: areas });
+  });
+
+  app.get(`${API_BASE}/hh/professional_roles`, requireAuth, requireRole('analyst'), async (req, res) => {
+    const roles = await getProfessionalRoles();
+    res.json(roles);
+  });
+
+  app.get(`${API_BASE}/hh/skills/suggest`, requireAuth, requireRole('analyst'), async (req, res) => {
+    const parsed = parseWithSchema(SkillSuggestSchema, req.query || {});
+    if (!parsed.ok) return res.status(400).json({ error: parsed.error });
+    const items = await suggestSkills(parsed.data.text, parsed.data.limit);
+    res.json({ items });
   });
 
   app.post(`${API_BASE}/leads`, async (req, res) => {

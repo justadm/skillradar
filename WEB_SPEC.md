@@ -201,6 +201,14 @@
 - `GET /api/v1/reports/:id/export?format=pdf|csv`
   - response: файл (стрим)
 
+### 4.4.1 HH справочники
+- `GET /api/v1/hh/areas`
+  - response: `{ "items": [ ... ] }`
+- `GET /api/v1/hh/professional_roles`
+  - response: `{ "categories": [ ... ] }`
+- `GET /api/v1/hh/skills/suggest?text=react&limit=10`
+  - response: `{ "items": ["React", "React Native", ...] }`
+
 ### 4.5 Role Profiles
 - `GET /api/v1/roles`
   - response: `{ "items": [RoleProfile] }`
