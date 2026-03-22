@@ -94,7 +94,7 @@ const startCheckout = async (plan: any) => {
 };
 
 useHead(`
-  <title>SkillRadar — Тарифы</title>
+  <title>GridAI — Тарифы</title>
   <meta name="robots" content="noindex,nofollow" />
 `);
 </script>

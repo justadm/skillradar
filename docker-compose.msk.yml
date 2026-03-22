@@ -1,0 +1,13 @@
+services:
+  web:
+    network_mode: host
+    environment:
+      - WEB_PORT=${WEB_HOST_PORT:-13001}
+      - WEB_HOST=127.0.0.1
+    ports: !reset []
+
+  monitor:
+    network_mode: host
+    environment:
+      - ALERT_URL=http://127.0.0.1:${WEB_HOST_PORT:-13001}
+      - ALERT_BOT_CONTAINER=gridai-bot

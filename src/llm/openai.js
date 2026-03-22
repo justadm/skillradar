@@ -25,6 +25,119 @@ const CriteriaSchema = z.object({
   area: z.string().optional()
 });
 
+function uniqueList(items = []) {
+  const seen = new Set();
+  const result = [];
+  for (const item of items) {
+    const value = String(item || '').trim();
+    if (!value) continue;
+    const key = value.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(value);
+  }
+  return result;
+}
+
+function detectSalaryAmount(rawText) {
+  const text = String(rawText || '').toLowerCase();
+  const patterns = [
+    /(?:^|\s)(?:от|до)\s*(\d{1,6})(?:[.,](\d{1,2}))?\s*(к|k|тыс|тысяч)?/giu,
+    /(?:^|\s)(\d{1,6})(?:[.,](\d{1,2}))?\s*(к|k|тыс|тысяч)\b/giu,
+    /(?:^|\s)(\d{4,6})(?:[.,](\d{1,2}))?(?![\d])/giu
+  ];
+
+  for (const pattern of patterns) {
+    const match = pattern.exec(text);
+    if (!match) continue;
+    const whole = Number(match[1] || 0);
+    const fraction = match[2] ? Number(`0.${match[2]}`) : 0;
+    const suffix = String(match[3] || '').toLowerCase();
+    if (suffix) return Math.round((whole + fraction) * 1000);
+    return whole;
+  }
+
+  return 0;
+}
+
+function detectExperience(rawText) {
+  const text = String(rawText || '').toLowerCase();
+  if (/\b(junior|jun|стаж[её]р|intern|internship)\b/iu.test(text)) return 'junior';
+  if (/(senior|lead|staff|principal|ведущ|лид|тимлид|team\s*lead|руковод)/iu.test(text)) return 'senior';
+  if (/\b(middle|mid|мидл)\b/iu.test(text)) return 'middle';
+  if (/\b([4-9]|\d{2,})\s*\+?\s*(?:years|year|лет|года|год)\b/iu.test(text)) return 'senior';
+  if (/\b([1-3])\s*\+?\s*(?:years|year|лет|года|год)\b/iu.test(text)) return 'middle';
+  return 'unknown';
+}
+
+function detectSkills(rawText) {
+  const text = String(rawText || '').toLowerCase();
+  const dictionary = [
+    ['Node.js', /\bnode(?:\.js|js)?\b/iu],
+    ['JavaScript', /\bjavascript\b|\bjs\b/iu],
+    ['TypeScript', /\btypescript\b|\bts\b/iu],
+    ['React', /\breact(?:js)?\b/iu],
+    ['Vue', /\bvue(?:js)?\b/iu],
+    ['PHP', /\bphp\b/iu],
+    ['Python', /\bpython\b/iu],
+    ['SQL', /\bsql\b/iu],
+    ['PostgreSQL', /\bpostgres(?:ql)?\b|\bpg\b/iu],
+    ['Docker', /\bdocker\b/iu],
+    ['Kubernetes', /\bk8s\b|\bkubernetes\b/iu],
+    ['REST', /\brest\b/iu],
+    ['Bitrix24', /(битрикс24|bitrix24)/iu],
+    ['AI', /\bai\b|\bllm\b|\bml\b|\bmachine learning\b/iu],
+    ['Backend', /\bbackend\b|\bбэкенд\b|\bбекенд\b/iu],
+    ['Frontend', /\bfrontend\b|\bфронтенд\b/iu],
+    ['Fullstack', /\bfullstack\b|\bfull-stack\b|\bфулстек\b/iu],
+    ['QA', /\bqa\b|\bтестировщик\b|\bтестирован/iu]
+  ];
+  return uniqueList(dictionary.filter(([, pattern]) => pattern.test(text)).map(([label]) => label));
+}
+
+function cleanupRole(rawText) {
+  let role = String(rawText || '');
+  role = role.replace(/[;,]/g, ',');
+  role = role
+    .split(',')
+    .map(part => part.trim())
+    .filter(Boolean)
+    .filter(part => !/(удал[её]нк|remote|гибрид|hybrid|офис|москва|спб|санкт-петербург)/iu.test(part))
+    .filter(part => !/(^|\s)(от|до)\s*\d/iu.test(part))
+    .join(' ');
+  role = role
+    .replace(/(удал[её]нка|remote|гибрид|hybrid|офис|релокация)/giu, ' ')
+    .replace(/(^|\s)(от|до)\s*\d+(?:[.,]\d+)?\s*(?:к|k|тыс|тысяч)?/giu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return role;
+}
+
+function detectKeywords(rawText) {
+  const text = String(rawText || '');
+  const keywords = [];
+  if (/(удал[её]нк|remote)/iu.test(text)) keywords.push('удаленка');
+  if (/\bгибрид|hybrid\b/iu.test(text)) keywords.push('гибрид');
+  if (/\bмосква\b/iu.test(text)) keywords.push('Москва');
+  if (/\bспб\b|\bсанкт-петербург\b/iu.test(text)) keywords.push('СПб');
+  return uniqueList(keywords);
+}
+
+function parseCriteriaHeuristic(rawText) {
+  const role = cleanupRole(rawText);
+  return CriteriaSchema.parse({
+    role,
+    skills: detectSkills(rawText),
+    salary: {
+      amount: detectSalaryAmount(rawText),
+      currency: 'RUR'
+    },
+    experience: detectExperience(rawText),
+    keywords: detectKeywords(rawText),
+    exclude: []
+  });
+}
+
 function safeJsonParse(text) {
   try {
     return JSON.parse(text);
@@ -64,17 +177,7 @@ function setCacheJson(cacheKey, value) {
 
 async function parseCriteria(rawText) {
   if (USE_LLM_MOCKS) {
-    const text = String(rawText || '');
-    const num = text.match(/(\d{2,6})/);
-    const amount = num ? Number(num[1]) : 0;
-    return {
-      role: 'Software Engineer',
-      skills: ['JavaScript', 'Node.js'],
-      salary: { amount, currency: 'RUR' },
-      experience: 'middle',
-      keywords: [],
-      exclude: []
-    };
+    return parseCriteriaHeuristic(rawText);
   }
   const cacheKey = `criteria:${hashText(rawText)}`;
   const cached = getCacheJson(cacheKey);
@@ -100,7 +203,7 @@ async function parseCriteria(rawText) {
   const parsed = safeJsonParse(content) || {};
   const data = CriteriaSchema.safeParse(parsed);
   if (!data.success) {
-    return CriteriaSchema.parse({});
+    return parseCriteriaHeuristic(rawText);
   }
   setCacheJson(cacheKey, data.data);
   return data.data;
@@ -189,6 +292,7 @@ async function marketComment(stats, query) {
 
 module.exports = {
   parseCriteria,
+  parseCriteriaHeuristic,
   explainFits,
   marketComment
 };

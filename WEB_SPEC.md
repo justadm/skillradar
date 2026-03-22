@@ -1,4 +1,4 @@
-# ТЗ: Веб‑сайт + Личный кабинет (SkillRadar)
+# ТЗ: Веб‑сайт + Личный кабинет (GridAI)
 
 Документ описывает структуру сайта, экраны ЛК, роли/доступы и API‑контракты.
 
@@ -166,7 +166,7 @@
 
 **TeamMember**
 ```json
-{"id":"user_1","name":"Константин Т.","role":"owner","email":"admin@skillradar.ai","status":"active"}
+{"id":"user_1","name":"Константин Т.","role":"owner","email":"admin@gridai.ru","status":"active"}
 ```
 
 ### 4.3 Auth

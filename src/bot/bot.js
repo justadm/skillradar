@@ -6,20 +6,50 @@ const { getHhConnectionStatus } = require('../hh/oauth');
 const { criteriaToSearchParams } = require('../hh/mappers');
 const { rankVacancies } = require('../score/scoring');
 const { computeMarketStats } = require('../market/market');
-const { getOrCreateUser, listStopWords, addStopWord, removeStopWord, saveQuery, getMarketCache, saveMarketCache, listRecentQueries, setUserMode, getUserMode, getB2BUsage, incrementB2BUsage } = require('../db');
+const {
+  getOrCreateUser,
+  listStopWords,
+  addStopWord,
+  removeStopWord,
+  saveQuery,
+  getMarketCache,
+  saveMarketCache,
+  listRecentQueries,
+  setUserMode,
+  getUserMode,
+  hasUserConsent,
+  markUserConsent,
+  getB2BUsage,
+  incrementB2BUsage,
+  upsertJobDigestSubscription,
+  listUserJobDigestSubscriptions,
+  updateUserJobDigestSubscription,
+  deactivateUserJobDigestSubscription
+} = require('../db');
 const { escapeHtml, includesAny } = require('../utils/text');
 
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const STARTED_AT = Date.now();
 const RATE_LIMIT_WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS || 60000);
 const RATE_LIMIT_MAX = Number(process.env.RATE_LIMIT_MAX || 10);
 const ADMIN_TG_IDS = String(process.env.ADMIN_TG_IDS || '').split(',').map(s => s.trim()).filter(Boolean);
 const B2B_DAILY_LIMIT = Number(process.env.B2B_DAILY_LIMIT || 3);
+const BRAND_NAME = process.env.BRAND_NAME || 'GridAI';
+const HR_CONTACT_HANDLE = process.env.HR_CONTACT_HANDLE || '@gridai_hr_bot';
+
+const BOT_AUDIENCE = {
+  COMBINED: 'combined',
+  JOBS: 'jobs',
+  HR: 'hr'
+};
 
 const rateBuckets = new Map();
 const searchCache = new Map();
 const savedQueries = new Map();
 const b2bReportCache = new Map();
+const START_CALLBACK = {
+  CONSENT: 'start:consent',
+  DATA: 'start:data'
+};
 
 const STATE = {
   IDLE: 'idle',
@@ -27,6 +57,9 @@ const STATE = {
   AWAIT_MARKET: 'await_market',
   STOP_ADD: 'stop_add',
   STOP_REMOVE: 'stop_remove',
+  DIGEST_CREATE: 'digest_create',
+  DIGEST_EDIT: 'digest_edit',
+  DIGEST_DISABLE: 'digest_disable',
   B2B_MARKET: 'b2b_market',
   B2B_COMP: 'b2b_comp',
   B2B_TEMPLATE: 'b2b_template'
@@ -46,6 +79,27 @@ function isAdmin(tgId) {
   return ADMIN_TG_IDS.includes(String(tgId));
 }
 
+async function completeTelegramWebLogin(requestId, profile) {
+  const baseUrl = String(process.env.AUTH_WEB_LOGIN_BASE_URL || process.env.APP_URL || '').replace(/\/$/, '');
+  if (!baseUrl) return false;
+  const response = await fetch(`${baseUrl}/api/v1/auth/telegram/web-login/complete`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(process.env.AUTH_WEB_LOGIN_SECRET
+        ? { 'X-Auth-Web-Login-Secret': String(process.env.AUTH_WEB_LOGIN_SECRET) }
+        : {})
+    },
+    body: JSON.stringify({
+      requestId,
+      telegramUser: profile
+    })
+  });
+  if (!response.ok) return false;
+  const data = await response.json().catch(() => ({}));
+  return Boolean(data?.ok);
+}
+
 function decodeHtml(text) {
   return String(text || '')
     .replace(/&amp;/g, '&')
@@ -57,6 +111,20 @@ function decodeHtml(text) {
 
 function stripHtml(text) {
   return decodeHtml(String(text || '').replace(/<[^>]*>/g, ''));
+}
+
+function formatDateTime(value) {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return new Intl.DateTimeFormat('ru-RU', {
+    timeZone: process.env.TZ || 'Europe/Moscow',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(date);
 }
 
 function buildReportPdf(title, body) {
@@ -92,14 +160,46 @@ function rateLimitOk(tgId) {
   return bucket.count <= RATE_LIMIT_MAX;
 }
 
-function mainMenu() {
+function jobsMenu() {
   return Markup.keyboard([
     ['Подбор вакансий', 'Рынок навыков'],
-    ['Мои стоп-слова', 'B2B Аналитика']
+    ['Мои стоп-слова', 'Мои дайджесты'],
   ]).resize();
 }
 
-function b2bMenu() {
+function hrMenu() {
+  return Markup.keyboard([
+    ['Рынок роли', 'Конкуренты'],
+    ['Шаблон вакансии', 'Экспорт отчета'],
+    ['Тарифы и лимиты'],
+    ['Главное меню']
+  ]).resize();
+}
+
+function combinedMenu(userId) {
+  const mode = getUserMode(userId);
+  return mode === 'b2b'
+    ? Markup.keyboard([
+      ['Рынок роли', 'Конкуренты'],
+      ['Шаблон вакансии', 'Экспорт отчета'],
+      ['Тарифы и лимиты', 'Соискательский режим'],
+      ['Главное меню']
+    ]).resize()
+    : Markup.keyboard([
+      ['Подбор вакансий', 'Рынок навыков'],
+      ['Мои стоп-слова', 'Мои дайджесты'],
+      ['B2B Аналитика']
+    ]).resize();
+}
+
+function menuForAudience(audience, userId) {
+  if (audience === BOT_AUDIENCE.HR) return hrMenu();
+  if (audience === BOT_AUDIENCE.JOBS) return jobsMenu();
+  return combinedMenu(userId);
+}
+
+function b2bMenuForAudience(audience) {
+  if (audience === BOT_AUDIENCE.HR) return hrMenu();
   return Markup.keyboard([
     ['Рынок роли', 'Конкуренты'],
     ['Шаблон вакансии', 'Экспорт отчета'],
@@ -108,9 +208,24 @@ function b2bMenu() {
   ]).resize();
 }
 
-function menuForUser(userId) {
-  const mode = getUserMode(userId);
-  return mode === 'b2b' ? b2bMenu() : mainMenu();
+function getAudienceFromCtx(ctx) {
+  return ctx?.state?.botAudience || BOT_AUDIENCE.COMBINED;
+}
+
+function getStartPayload(ctx) {
+  const direct = String(ctx?.startPayload || '').trim();
+  if (direct) return direct;
+  const text = String(ctx?.message?.text || '').trim();
+  const match = text.match(/^\/start(?:@\w+)?\s+(.+)$/i);
+  return match ? String(match[1] || '').trim() : '';
+}
+
+function isJobsAudience(audience) {
+  return audience === BOT_AUDIENCE.JOBS || audience === BOT_AUDIENCE.COMBINED;
+}
+
+function isHrAudience(audience) {
+  return audience === BOT_AUDIENCE.HR || audience === BOT_AUDIENCE.COMBINED;
 }
 
 function stoplistMenu() {
@@ -120,9 +235,98 @@ function stoplistMenu() {
   ]).resize();
 }
 
+function digestMenu() {
+  return Markup.keyboard([
+    ['Создать дайджест', 'Мои подписки'],
+    ['Изменить дайджест', 'Отключить дайджест'],
+    ['Главное меню']
+  ]).resize();
+}
+
+function startConsentMenu() {
+  return Markup.inlineKeyboard([
+    [Markup.button.callback('Продолжить', START_CALLBACK.CONSENT)],
+    [Markup.button.callback('Как мы используем данные', START_CALLBACK.DATA)]
+  ]);
+}
+
+function getStartPrompt(audience, brandName) {
+  if (audience === BOT_AUDIENCE.HR) {
+    return [
+      `<b>${escapeHtml(brandName)} Recruiter</b>`,
+      'AI-аналитика вакансий, ролей и навыков для HR и рекрутеров.',
+      '',
+      'Что умеет бот:',
+      '• рынок роли и спрос по навыкам',
+      '• конкуренты и активные работодатели',
+      '• шаблон вакансии и быстрый экспорт',
+      '',
+      'Нажмите «Продолжить», чтобы открыть меню.'
+    ].join('\n');
+  }
+
+  if (audience === BOT_AUDIENCE.JOBS) {
+    return [
+      `<b>${escapeHtml(brandName)} Careers</b>`,
+      'AI-поиск вакансий и ежедневные дайджесты для соискателей.',
+      '',
+      'Что умеет бот:',
+      '• поиск вакансий по запросу в свободной форме',
+      '• объяснение, почему вакансия подходит',
+      '• стоп-слова и daily-дайджест новых вакансий',
+      '',
+      'Нажмите «Продолжить», чтобы открыть меню.'
+    ].join('\n');
+  }
+
+  return [
+    `<b>${escapeHtml(brandName)}</b>`,
+    'AI-аналитика вакансий, ролей и навыков.',
+    '',
+    'В этом боте доступны два сценария:',
+    '• соискателю: поиск вакансий, стоп-слова и дайджесты',
+    '• HR: рынок ролей, конкуренты и шаблон вакансии',
+    '',
+    'Нажмите «Продолжить», чтобы открыть меню.'
+  ].join('\n');
+}
+
+function getStartReadyMessage(audience, brandName) {
+  if (audience === BOT_AUDIENCE.HR) {
+    return `${brandName} Recruiter готов. Открываю меню HR-аналитики.`;
+  }
+  if (audience === BOT_AUDIENCE.JOBS) {
+    return `${brandName} Careers готов. Открываю меню поиска вакансий.`;
+  }
+  return `${brandName} готов. Открываю главное меню.`;
+}
+
+function getConsentAlert() {
+  return [
+    'Мы используем только сообщения, которые вы отправляете в бот, и публичные данные вакансий.',
+    'Никакие действия от вашего имени на hh.ru не выполняются.',
+    'Для дайджестов сохраняются ваши поисковые запросы и история отправок.'
+  ].join('\n');
+}
+
+async function replyStartPrompt(ctx, audience, user, brandName) {
+  setState(ctx.from.id, STATE.IDLE);
+  await ctx.reply(getStartPrompt(audience, brandName), {
+    parse_mode: 'HTML',
+    ...startConsentMenu()
+  });
+}
+
+function getConsentBotKey(audience) {
+  if (audience === BOT_AUDIENCE.HR) return BOT_AUDIENCE.HR;
+  if (audience === BOT_AUDIENCE.JOBS) return BOT_AUDIENCE.JOBS;
+  return BOT_AUDIENCE.COMBINED;
+}
+
 function paginationMenu() {
   return Markup.keyboard([
     ['Показать еще', 'Сохранить запрос'],
+    ['Подписаться на дайджест'],
     ['Главное меню']
   ]).resize();
 }
@@ -144,7 +348,7 @@ function b2bPaywallMessage() {
     'Лимит B2B‑отчетов на сегодня исчерпан.',
     `Текущий лимит: ${B2B_DAILY_LIMIT} отчетов/день.`,
     'Напишите нам, чтобы увеличить лимит или подключить тариф.',
-    'Контакт: @skillradar_hr_bot'
+    `Контакт: ${HR_CONTACT_HANDLE}`
   ].join('\n');
 }
 
@@ -155,7 +359,7 @@ function b2bPricingMessage() {
     'Pro — 10 отчетов/день, до 3 пользователей, экспорт PDF.',
     'Team — 30 отчетов/день, до 10 пользователей, SLA и кастом.',
     '',
-    'Чтобы подключить тариф — напишите: @skillradar_hr_bot'
+    `Чтобы подключить тариф — напишите: ${HR_CONTACT_HANDLE}`
   ].join('\n');
 }
 
@@ -397,7 +601,7 @@ async function handleSearch(ctx, text) {
     return;
   }
 
-  searchCache.set(String(tgId), { items: all, index: 0, criteria });
+  searchCache.set(String(tgId), { items: all, index: 0, criteria, rawText: text });
   await sendNextBatch(ctx);
 }
 
@@ -405,7 +609,7 @@ async function sendNextBatch(ctx) {
   const tgId = ctx.from.id;
   const entry = searchCache.get(String(tgId));
   if (!entry) {
-    await ctx.reply('Нет активного поиска. Нажми «Подбор вакансий».', mainMenu());
+    await ctx.reply('Нет активного поиска. Нажми «Подбор вакансий».', jobsMenu());
     return;
   }
   const batchSize = 3;
@@ -430,7 +634,7 @@ async function sendNextBatch(ctx) {
     await ctx.reply('Еще результаты?', paginationMenu());
   } else {
     searchCache.delete(String(tgId));
-    await ctx.reply('Главное меню', mainMenu());
+    await ctx.reply('Главное меню', menuForAudience(getAudienceFromCtx(ctx), getOrCreateUser(ctx.from.id).id));
   }
 }
 
@@ -459,7 +663,7 @@ async function handleMarket(ctx, text) {
     ].filter(Boolean).join('\n');
 
     await ctx.reply(msg, { parse_mode: 'HTML' });
-    await ctx.reply('Главное меню', mainMenu());
+    await ctx.reply('Главное меню', menuForAudience(getAudienceFromCtx(ctx), getOrCreateUser(ctx.from.id).id));
     return;
   }
 
@@ -490,7 +694,7 @@ async function handleMarket(ctx, text) {
   ].filter(Boolean).join('\n');
 
   await ctx.reply(msg, { parse_mode: 'HTML' });
-  await ctx.reply('Главное меню', mainMenu());
+  await ctx.reply('Главное меню', menuForAudience(getAudienceFromCtx(ctx), getOrCreateUser(ctx.from.id).id));
 }
 
 async function handleB2BMarket(ctx, text) {
@@ -498,7 +702,7 @@ async function handleB2BMarket(ctx, text) {
   const limit = canUseB2B(user);
   if (!limit.allowed) {
     await ctx.reply(b2bPaywallMessage());
-    await ctx.reply('B2B меню', b2bMenu());
+    await ctx.reply('B2B меню', b2bMenuForAudience(getAudienceFromCtx(ctx)));
     return;
   }
   await ctx.reply('Собираю аналитику рынка…', { reply_markup: { remove_keyboard: true } });
@@ -525,7 +729,7 @@ async function handleB2BMarket(ctx, text) {
     await ctx.reply(msg, { parse_mode: 'HTML' });
     incrementB2BUsage(user.id, limit.dayKey);
     b2bReportCache.set(String(ctx.from.id), { title: `Рынок: ${text}`, body: stripHtml(msg) });
-    await ctx.reply('B2B меню', b2bMenu());
+    await ctx.reply('B2B меню', b2bMenuForAudience(getAudienceFromCtx(ctx)));
     return;
   }
   const params = { text, area: process.env.HH_AREA_DEFAULT || '113' };
@@ -556,7 +760,7 @@ async function handleB2BMarket(ctx, text) {
   await ctx.reply(msg, { parse_mode: 'HTML' });
   incrementB2BUsage(user.id, limit.dayKey);
   b2bReportCache.set(String(ctx.from.id), { title: `Рынок: ${text}`, body: stripHtml(msg) });
-  await ctx.reply('B2B меню', b2bMenu());
+  await ctx.reply('B2B меню', b2bMenuForAudience(getAudienceFromCtx(ctx)));
 }
 
 async function handleB2BCompetitors(ctx, text) {
@@ -564,7 +768,7 @@ async function handleB2BCompetitors(ctx, text) {
   const limit = canUseB2B(user);
   if (!limit.allowed) {
     await ctx.reply(b2bPaywallMessage());
-    await ctx.reply('B2B меню', b2bMenu());
+    await ctx.reply('B2B меню', b2bMenuForAudience(getAudienceFromCtx(ctx)));
     return;
   }
   await ctx.reply('Собираю список конкурентов…', { reply_markup: { remove_keyboard: true } });
@@ -581,7 +785,7 @@ async function handleB2BCompetitors(ctx, text) {
     await ctx.reply(msg, { parse_mode: 'HTML' });
     incrementB2BUsage(user.id, limit.dayKey);
     b2bReportCache.set(String(ctx.from.id), { title: `Конкуренты: ${text}`, body: stripHtml(msg) });
-    await ctx.reply('B2B меню', b2bMenu());
+    await ctx.reply('B2B меню', b2bMenuForAudience(getAudienceFromCtx(ctx)));
     return;
   }
   const params = { text, area: process.env.HH_AREA_DEFAULT || '113' };
@@ -610,7 +814,7 @@ async function handleB2BCompetitors(ctx, text) {
   await ctx.reply(msg, { parse_mode: 'HTML' });
   incrementB2BUsage(user.id, limit.dayKey);
   b2bReportCache.set(String(ctx.from.id), { title: `Конкуренты: ${text}`, body: stripHtml(msg) });
-  await ctx.reply('B2B меню', b2bMenu());
+  await ctx.reply('B2B меню', b2bMenuForAudience(getAudienceFromCtx(ctx)));
 }
 
 async function handleB2BTemplate(ctx, text) {
@@ -618,7 +822,7 @@ async function handleB2BTemplate(ctx, text) {
   const limit = canUseB2B(user);
   if (!limit.allowed) {
     await ctx.reply(b2bPaywallMessage());
-    await ctx.reply('B2B меню', b2bMenu());
+    await ctx.reply('B2B меню', b2bMenuForAudience(getAudienceFromCtx(ctx)));
     return;
   }
   await ctx.reply('Формирую шаблон вакансии…', { reply_markup: { remove_keyboard: true } });
@@ -638,7 +842,7 @@ async function handleB2BTemplate(ctx, text) {
     await ctx.reply(msg, { parse_mode: 'HTML' });
     incrementB2BUsage(user.id, limit.dayKey);
     b2bReportCache.set(String(ctx.from.id), { title: `Шаблон вакансии: ${text}`, body: stripHtml(msg) });
-    await ctx.reply('B2B меню', b2bMenu());
+    await ctx.reply('B2B меню', b2bMenuForAudience(getAudienceFromCtx(ctx)));
     return;
   }
   const params = { text, area: process.env.HH_AREA_DEFAULT || '113' };
@@ -662,7 +866,7 @@ async function handleB2BTemplate(ctx, text) {
   await ctx.reply(msg, { parse_mode: 'HTML' });
   incrementB2BUsage(user.id, limit.dayKey);
   b2bReportCache.set(String(ctx.from.id), { title: `Шаблон вакансии: ${text}`, body: stripHtml(msg) });
-  await ctx.reply('B2B меню', b2bMenu());
+  await ctx.reply('B2B меню', b2bMenuForAudience(getAudienceFromCtx(ctx)));
 }
 
 async function handleStoplist(ctx) {
@@ -672,12 +876,128 @@ async function handleStoplist(ctx) {
   await ctx.reply(text, stoplistMenu());
 }
 
-function startBot() {
-  if (!BOT_TOKEN) {
-    throw new Error('TELEGRAM_BOT_TOKEN is missing');
+function formatDigestSubscription(subscription) {
+  const status = subscription.active ? 'Активна' : 'Отключена';
+  return [
+    `<b>#${subscription.id}</b> • ${escapeHtml(status)}`,
+    `Запрос: ${escapeHtml(subscription.raw_query)}`,
+    `Последняя отправка: ${escapeHtml(formatDateTime(subscription.last_success_at))}`,
+    `Ошибка: ${escapeHtml(subscription.last_error || '—')}`
+  ].join('\n');
+}
+
+async function handleDigestMenu(ctx) {
+  getOrCreateUser(ctx.from.id);
+  setState(ctx.from.id, STATE.IDLE);
+  await ctx.reply('Управление ежедневными дайджестами вакансий.', digestMenu());
+}
+
+async function handleListDigestSubscriptions(ctx) {
+  const user = getOrCreateUser(ctx.from.id);
+  const items = listUserJobDigestSubscriptions(user.id);
+  if (!items.length) {
+    await ctx.reply('Подписок пока нет. Нажми «Создать дайджест».', digestMenu());
+    return;
+  }
+  const text = items.map(formatDigestSubscription).join('\n\n────────\n\n');
+  await ctx.reply(text, { parse_mode: 'HTML', ...digestMenu() });
+}
+
+async function createDigestSubscription(ctx, rawQuery, criteria = null) {
+  const user = getOrCreateUser(ctx.from.id);
+  const cleanQuery = String(rawQuery || '').trim();
+  if (!cleanQuery) {
+    await ctx.reply('Запрос пустой. Пример: «Backend, Node.js, удаленка, от 200к».', digestMenu());
+    return;
+  }
+  const resolvedCriteria = criteria || await parseCriteria(cleanQuery);
+  const subscription = upsertJobDigestSubscription(
+    user.id,
+    ctx.from.id,
+    cleanQuery,
+    resolvedCriteria,
+    {
+      cadence: 'daily',
+      timezone: process.env.TZ || 'Europe/Moscow',
+      botKey: getAudienceFromCtx(ctx) === BOT_AUDIENCE.COMBINED ? 'combined' : 'jobs'
+    }
+  );
+  await ctx.reply(`Дайджест сохранен.\n\n${formatDigestSubscription(subscription)}`, { parse_mode: 'HTML', ...digestMenu() });
+}
+
+function parseDigestEditInput(text) {
+  const value = String(text || '').trim();
+  const match = value.match(/^(\d+)\s*[:\-]\s*(.+)$/);
+  if (match) {
+    return { subscriptionId: Number(match[1]), rawQuery: match[2].trim() };
+  }
+  const firstSpace = value.indexOf(' ');
+  if (firstSpace > 0) {
+    const maybeId = Number(value.slice(0, firstSpace));
+    const rawQuery = value.slice(firstSpace + 1).trim();
+    if (Number.isFinite(maybeId) && maybeId > 0 && rawQuery) {
+      return { subscriptionId: maybeId, rawQuery };
+    }
+  }
+  return null;
+}
+
+async function handleEditDigestSubscription(ctx, text) {
+  const user = getOrCreateUser(ctx.from.id);
+  const parsed = parseDigestEditInput(text);
+  if (!parsed) {
+    await ctx.reply('Формат: `ID: новый запрос`.\nПример: `12: Backend, Node.js, Москва`', {
+      parse_mode: 'Markdown',
+      ...digestMenu()
+    });
+    return;
+  }
+  const criteria = await parseCriteria(parsed.rawQuery);
+  const updated = updateUserJobDigestSubscription(user.id, parsed.subscriptionId, {
+    raw_query: parsed.rawQuery,
+    criteria_json: criteria,
+    active: 1
+  });
+  if (!updated) {
+    await ctx.reply('Подписка не найдена.', digestMenu());
+    return;
+  }
+  await ctx.reply(`Подписка обновлена.\n\n${formatDigestSubscription(updated)}`, { parse_mode: 'HTML', ...digestMenu() });
+}
+
+async function handleDisableDigestSubscription(ctx, text) {
+  const user = getOrCreateUser(ctx.from.id);
+  const subscriptionId = Number(String(text || '').trim());
+  if (!Number.isFinite(subscriptionId) || subscriptionId <= 0) {
+    await ctx.reply('Укажи числовой ID подписки. Пример: `12`', {
+      parse_mode: 'Markdown',
+      ...digestMenu()
+    });
+    return;
+  }
+  const updated = deactivateUserJobDigestSubscription(user.id, subscriptionId);
+  if (!updated) {
+    await ctx.reply('Подписка не найдена.', digestMenu());
+    return;
+  }
+  await ctx.reply(`Подписка отключена.\n\n${formatDigestSubscription(updated)}`, { parse_mode: 'HTML', ...digestMenu() });
+}
+
+function startBot(options = {}) {
+  const audience = options.audience || BOT_AUDIENCE.COMBINED;
+  const botToken = options.token || process.env.TELEGRAM_BOT_TOKEN;
+  const brandName = options.brandName || BRAND_NAME;
+  const botLabel = audience === BOT_AUDIENCE.HR ? 'HR bot' : audience === BOT_AUDIENCE.JOBS ? 'Jobs bot' : 'Combined bot';
+
+  if (!botToken) {
+    throw new Error(`Telegram token is missing for ${botLabel}`);
   }
 
-  const bot = new Telegraf(BOT_TOKEN);
+  const bot = new Telegraf(botToken);
+  bot.use(async (ctx, next) => {
+    ctx.state.botAudience = audience;
+    await next();
+  });
 
   bot.command('status', async ctx => {
     const hh = getHhConnectionStatus();
@@ -687,7 +1007,8 @@ function startBot() {
     const seconds = uptimeSec % 60;
     const uptime = `${hours}h ${minutes}m ${seconds}s`;
     const msg = [
-      '<b>SkillRadar статус</b>',
+      `<b>${escapeHtml(brandName)} статус</b>`,
+      `Audience: ${audience}`,
       `Uptime: ${uptime}`,
       `HH area: ${process.env.HH_AREA_DEFAULT || '113'}`,
       `HH cache TTL: ${process.env.HH_CACHE_TTL_MS || '21600000'}`,
@@ -705,26 +1026,35 @@ function startBot() {
     setState(ctx.from.id, STATE.IDLE);
     searchCache.delete(String(ctx.from.id));
     const user = getOrCreateUser(ctx.from.id);
-    await ctx.reply('Состояние сброшено. Главное меню:', menuForUser(user.id));
+    await ctx.reply('Состояние сброшено. Главное меню:', menuForAudience(audience, user.id));
   });
 
   bot.command('help', async ctx => {
+    const isJobs = isJobsAudience(audience);
+    const isHr = isHrAudience(audience);
     const msg = [
-      '<b>Как формулировать запрос</b>',
-      'Пример: «Backend, 3+ года, Node.js/SQL, от 200к».',
+      `<b>${escapeHtml(brandName)}</b>`,
+      isJobs && !isHr ? 'Бот для соискателей: поиск вакансий, рынок навыков и дайджесты.' : '',
+      isHr && !isJobs ? 'Бот для HR: рынок ролей, конкуренты, шаблоны вакансий и экспорт.' : '',
       '',
-      '<b>Что можно указать</b>',
-      '• Роль (backend/frontend/QA/аналитик)',
-      '• Опыт (junior/middle/senior или годы)',
-      '• Навыки (React, Node.js, SQL)',
-      '• Зарплата (от/до, в рублях)',
-      '• Локация/формат (Москва/СПб, удаленка/офис/гибрид)',
-      '• Занятость (полная/частичная/проектная)',
-      '• В B2B: Рынок роли / Конкуренты / Шаблон вакансии / Экспорт отчета',
+      isJobs ? '<b>Соискателю</b>' : '',
+      isJobs ? '• Поиск вакансий по роли, навыкам, зарплате и формату работы' : '',
+      isJobs ? '• Стоп-слова и ежедневные дайджесты новых вакансий' : '',
+      isHr ? '<b>HR / Recruiter</b>' : '',
+      isHr ? '• Рынок роли, конкуренты, шаблон вакансии, экспорт отчета' : '',
+      isHr ? '• Тарифы и лимиты для B2B-режима' : '',
       '',
-      'Команды: /start, /help, /status, /reset, /health, /debug'
-    ].join('\n');
+      `Команды: /start, /help${isJobs ? ', /digest' : ''}, /status, /reset, /health, /debug`
+    ].filter(Boolean).join('\n');
     await ctx.reply(msg, { parse_mode: 'HTML' });
+  });
+
+  bot.command('digest', async ctx => {
+    if (!isJobsAudience(audience)) {
+      await ctx.reply('В этом боте дайджесты недоступны.');
+      return;
+    }
+    await handleDigestMenu(ctx);
   });
 
   bot.command('id', async ctx => {
@@ -755,7 +1085,8 @@ function startBot() {
     }
     const hh = getHhConnectionStatus();
     const msg = [
-      '<b>SkillRadar debug</b>',
+      `<b>${escapeHtml(brandName)} debug</b>`,
+      `Audience: ${audience}`,
       `NODE_ENV: ${process.env.NODE_ENV || 'development'}`,
       `HH area: ${process.env.HH_AREA_DEFAULT || '113'}`,
       `HH cache TTL: ${process.env.HH_CACHE_TTL_MS || '21600000'}`,
@@ -774,32 +1105,107 @@ function startBot() {
   });
 
   bot.start(async ctx => {
+    const startPayload = getStartPayload(ctx);
+    if (startPayload.startsWith('login_')) {
+      const requestId = startPayload.slice('login_'.length).trim();
+      const ok = await completeTelegramWebLogin(requestId, {
+        id: String(ctx.from.id || ''),
+        first_name: ctx.from.first_name || '',
+        last_name: ctx.from.last_name || '',
+        username: ctx.from.username || '',
+        language_code: ctx.from.language_code || ''
+      });
+      await ctx.reply(
+        ok
+          ? 'Вход для веба подтверждён. Вернитесь на страницу GridAI, авторизация завершится автоматически.'
+          : 'Ссылка для входа недействительна или устарела. Запустите вход с сайта ещё раз.'
+      );
+      return;
+    }
     const user = getOrCreateUser(ctx.from.id);
+    const consentKey = getConsentBotKey(audience);
+    if (!hasUserConsent(user.id, consentKey)) {
+      await replyStartPrompt(ctx, audience, user, brandName);
+      return;
+    }
     setState(ctx.from.id, STATE.IDLE);
-    const mode = getUserMode(user.id);
-    await ctx.reply('Привет! Я помогу подобрать вакансии и показать рынок.', mode === 'b2b' ? b2bMenu() : mainMenu());
+    await ctx.reply(getStartReadyMessage(audience, brandName), menuForAudience(audience, user.id));
+  });
+
+  bot.action(START_CALLBACK.DATA, async ctx => {
+    await ctx.answerCbQuery(getConsentAlert(), { show_alert: true });
+  });
+
+  bot.action(START_CALLBACK.CONSENT, async ctx => {
+    const user = getOrCreateUser(ctx.from.id);
+    markUserConsent(user.id, getConsentBotKey(audience));
+    setState(ctx.from.id, STATE.IDLE);
+    await ctx.answerCbQuery('Доступ открыт');
+    try {
+      await ctx.editMessageReplyMarkup(undefined);
+    } catch (_) {}
+    await ctx.reply(getStartReadyMessage(audience, brandName), menuForAudience(audience, user.id));
   });
 
   bot.hears('Подбор вакансий', async ctx => {
+    if (!isJobsAudience(audience)) return;
     setState(ctx.from.id, STATE.AWAIT_SEARCH);
     await ctx.reply('Опиши запрос: роль, опыт, навыки, зарплата.', { reply_markup: { remove_keyboard: true } });
   });
 
   bot.hears('Рынок навыков', async ctx => {
+    if (!isJobsAudience(audience)) return;
     setState(ctx.from.id, STATE.AWAIT_MARKET);
     await ctx.reply('Введи роль или навык для анализа.', { reply_markup: { remove_keyboard: true } });
   });
 
   bot.hears('Мои стоп-слова', async ctx => {
+    if (!isJobsAudience(audience)) return;
     setState(ctx.from.id, STATE.IDLE);
     await handleStoplist(ctx);
   });
 
+  bot.hears('Мои дайджесты', async ctx => {
+    if (!isJobsAudience(audience)) return;
+    await handleDigestMenu(ctx);
+  });
+
+  bot.hears('Создать дайджест', async ctx => {
+    if (!isJobsAudience(audience)) return;
+    setState(ctx.from.id, STATE.DIGEST_CREATE);
+    await ctx.reply('Отправь запрос для ежедневного дайджеста.\nПример: Backend, Node.js, удаленка, от 200к', {
+      reply_markup: { remove_keyboard: true }
+    });
+  });
+
+  bot.hears('Мои подписки', async ctx => {
+    if (!isJobsAudience(audience)) return;
+    setState(ctx.from.id, STATE.IDLE);
+    await handleListDigestSubscriptions(ctx);
+  });
+
+  bot.hears('Изменить дайджест', async ctx => {
+    if (!isJobsAudience(audience)) return;
+    setState(ctx.from.id, STATE.DIGEST_EDIT);
+    await ctx.reply('Отправь в формате: ID: новый запрос\nПример: 12: Backend, Node.js, Москва', {
+      reply_markup: { remove_keyboard: true }
+    });
+  });
+
+  bot.hears('Отключить дайджест', async ctx => {
+    if (!isJobsAudience(audience)) return;
+    setState(ctx.from.id, STATE.DIGEST_DISABLE);
+    await ctx.reply('Отправь ID подписки, которую нужно отключить.\nПример: 12', {
+      reply_markup: { remove_keyboard: true }
+    });
+  });
+
   bot.hears('B2B Аналитика', async ctx => {
+    if (!isHrAudience(audience)) return;
     const user = getOrCreateUser(ctx.from.id);
     setUserMode(user.id, 'b2b');
     setState(ctx.from.id, STATE.IDLE);
-    await ctx.reply('Режим HR‑аналитики включен.', b2bMenu());
+    await ctx.reply('Режим HR‑аналитики включен.', b2bMenuForAudience(audience));
   });
 
   bot.hears('Тарифы и лимиты', async ctx => {
@@ -811,29 +1217,30 @@ function startBot() {
       `Сегодня использовано: ${used}/${B2B_DAILY_LIMIT}`
     ].join('\n');
     await ctx.reply(msg, { parse_mode: 'HTML' });
-    await ctx.reply('B2B меню', b2bMenu());
+    await ctx.reply('B2B меню', b2bMenuForAudience(audience));
   });
 
   bot.hears('Экспорт отчета', async ctx => {
     const cached = b2bReportCache.get(String(ctx.from.id));
     if (!cached) {
-      await ctx.reply('Сначала сформируйте отчет (рынок/конкуренты/шаблон).', b2bMenu());
+      await ctx.reply('Сначала сформируйте отчет (рынок/конкуренты/шаблон).', b2bMenuForAudience(audience));
       return;
     }
     const content = `${cached.title}\n\n${cached.body}`;
-    const filename = `skillradar-report-${Date.now()}.txt`;
+    const filename = `gridai-report-${Date.now()}.txt`;
     const pdfBuffer = await buildReportPdf(cached.title, cached.body);
-    const pdfName = `skillradar-report-${Date.now()}.pdf`;
+    const pdfName = `gridai-report-${Date.now()}.pdf`;
     await ctx.replyWithDocument({ source: pdfBuffer, filename: pdfName }, { caption: 'Экспорт отчета (PDF)' });
     await ctx.replyWithDocument({ source: Buffer.from(content, 'utf8'), filename }, { caption: 'Экспорт отчета (TXT)' });
-    await ctx.reply('B2B меню', b2bMenu());
+    await ctx.reply('B2B меню', b2bMenuForAudience(audience));
   });
 
   bot.hears('Соискательский режим', async ctx => {
+    if (audience !== BOT_AUDIENCE.COMBINED) return;
     const user = getOrCreateUser(ctx.from.id);
     setUserMode(user.id, 'jobseeker');
     setState(ctx.from.id, STATE.IDLE);
-    await ctx.reply('Соискательский режим включен.', mainMenu());
+    await ctx.reply('Соискательский режим включен.', jobsMenu());
   });
 
   bot.hears('Добавить стоп-слово', async ctx => {
@@ -849,14 +1256,14 @@ function startBot() {
   bot.hears('Назад', async ctx => {
     setState(ctx.from.id, STATE.IDLE);
     const user = getOrCreateUser(ctx.from.id);
-    await ctx.reply('Главное меню', menuForUser(user.id));
+    await ctx.reply('Главное меню', menuForAudience(audience, user.id));
   });
 
   bot.hears('Главное меню', async ctx => {
     setState(ctx.from.id, STATE.IDLE);
     searchCache.delete(String(ctx.from.id));
     const user = getOrCreateUser(ctx.from.id);
-    await ctx.reply('Главное меню', menuForUser(user.id));
+    await ctx.reply('Главное меню', menuForAudience(audience, user.id));
   });
 
   bot.hears('Показать еще', async ctx => {
@@ -868,12 +1275,31 @@ function startBot() {
     const entry = searchCache.get(String(tgId));
     if (!entry) {
       const user = getOrCreateUser(tgId);
-      await ctx.reply('Нет активного поиска для сохранения.', menuForUser(user.id));
+      await ctx.reply('Нет активного поиска для сохранения.', menuForAudience(audience, user.id));
       return;
     }
     savedQueries.set(String(tgId), entry);
     const user = getOrCreateUser(tgId);
-    await ctx.reply('Запрос сохранен. Используй команду /repeat, чтобы повторить.', menuForUser(user.id));
+    await ctx.reply('Запрос сохранен. Используй команду /repeat, чтобы повторить.', menuForAudience(audience, user.id));
+  });
+
+  bot.hears('Подписаться на дайджест', async ctx => {
+    if (!isJobsAudience(audience)) return;
+    const tgId = ctx.from.id;
+    const entry = searchCache.get(String(tgId));
+    const user = getOrCreateUser(tgId);
+    if (!entry?.rawText || !entry?.criteria) {
+      await ctx.reply('Нет активного поиска для подписки. Сначала сделайте поиск вакансий.', menuForAudience(audience, user.id));
+      return;
+    }
+    const subscription = upsertJobDigestSubscription(
+      user.id,
+      tgId,
+      entry.rawText,
+      entry.criteria,
+      { cadence: 'daily', timezone: process.env.TZ || 'Europe/Moscow', botKey: audience === BOT_AUDIENCE.COMBINED ? 'combined' : 'jobs' }
+    );
+    await ctx.reply(`Дайджест сохранен.\n\n${formatDigestSubscription(subscription)}`, { parse_mode: 'HTML', ...digestMenu() });
   });
 
   bot.command('repeat', async ctx => {
@@ -912,6 +1338,20 @@ function startBot() {
       return;
     }
 
+    try {
+      if (state === STATE.DIGEST_DISABLE) {
+        setState(ctx.from.id, STATE.IDLE);
+        await handleDisableDigestSubscription(ctx, text);
+        return;
+      }
+    } catch (err) {
+      console.error('[bot:error]', err);
+      await ctx.reply('Не удалось обновить подписку на дайджест. Попробуйте позже.');
+      const user = getOrCreateUser(ctx.from.id);
+      await ctx.reply('Главное меню', menuForAudience(audience, user.id));
+      return;
+    }
+
     const hasLetters = /[a-zа-я]/i.test(text);
     if (!text || text.length < 3 || !hasLetters) {
       await ctx.reply('Запрос слишком короткий. Пример: «Backend, 3+ года, Node.js, от 200к».');
@@ -940,6 +1380,16 @@ function startBot() {
       if (state === STATE.AWAIT_MARKET) {
         setState(ctx.from.id, STATE.IDLE);
         await handleMarket(ctx, text);
+        return;
+      }
+      if (state === STATE.DIGEST_CREATE) {
+        setState(ctx.from.id, STATE.IDLE);
+        await createDigestSubscription(ctx, text);
+        return;
+      }
+      if (state === STATE.DIGEST_EDIT) {
+        setState(ctx.from.id, STATE.IDLE);
+        await handleEditDigestSubscription(ctx, text);
         return;
       }
       if (state === STATE.B2B_MARKET) {
@@ -973,7 +1423,7 @@ function startBot() {
       console.error('[bot:error]', err);
       await ctx.reply('Похоже, есть проблема с сетью или API. Попробуйте позже.');
       const user = getOrCreateUser(ctx.from.id);
-      await ctx.reply('Главное меню', menuForUser(user.id));
+      await ctx.reply('Главное меню', menuForAudience(audience, user.id));
     }
   });
 

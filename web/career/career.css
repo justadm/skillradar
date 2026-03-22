@@ -1,0 +1,221 @@
+:root {
+  --sr-accent: #5c7cff;
+  --sr-accent-2: #6f86ff;
+  --sr-highlight: #7fd3c6;
+  --sr-border: rgba(143, 162, 189, 0.18);
+  --sr-card: #202633;
+  --sr-bg: #171c26;
+  --sr-text: #eef3fb;
+  --sr-muted: #9aa8be;
+}
+
+:root[data-bs-theme='light'] {
+  --sr-border: rgba(47, 67, 92, 0.12);
+  --sr-card: #ffffff;
+  --sr-bg: #f5f7fb;
+  --sr-text: #1c2738;
+  --sr-muted: #64748b;
+}
+
+body {
+  font-family: "Manrope", system-ui, -apple-system, sans-serif;
+  background: var(--sr-bg);
+  color: var(--sr-text);
+}
+
+.bg-body-tertiary {
+  background: #1b2230 !important;
+}
+
+:root[data-bs-theme='light'] .bg-body-tertiary {
+  background: rgba(255, 255, 255, 0.98) !important;
+}
+
+.border-bottom {
+  border-color: var(--sr-border) !important;
+}
+
+.navbar {
+  box-shadow: inset 0 -1px 0 var(--sr-border);
+}
+
+.sr-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--sr-text);
+  text-decoration: none;
+}
+
+.sr-brand-mark {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
+}
+
+.sr-brand-mark svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+:root[data-bs-theme='light'] .sr-brand-mark {
+  background: #ffffff;
+  border: 1px solid rgba(47, 67, 92, 0.1);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+  padding: 4px;
+}
+
+:root[data-bs-theme='light'] .sr-brand-mark svg {
+  border-radius: 12px;
+  transform: scale(0.88);
+  transform-origin: center;
+  filter: saturate(0.78) contrast(0.94) brightness(1.03);
+}
+
+.sr-brand-copy {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+}
+
+.sr-brand-title {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.sr-brand-subtitle {
+  margin-top: 4px;
+  font-size: 0.73rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--sr-muted);
+}
+
+.sr-sidebar {
+  min-height: 100vh;
+  border-right: 1px solid var(--sr-border);
+}
+
+.sr-sidebar .nav-link {
+  margin: 0 0 10px;
+  border-radius: 16px;
+  border: 1px solid var(--sr-border);
+  background: #242b39;
+  color: var(--sr-muted);
+}
+
+:root[data-bs-theme='light'] .sr-sidebar .nav-link {
+  background: #eef3f8;
+  color: #365673;
+  border-color: rgba(18, 48, 74, 0.12);
+}
+
+.sr-sidebar .nav-link:hover,
+.sr-sidebar .nav-link.active {
+  color: var(--sr-text);
+  background: #2c3546;
+  border-color: rgba(92, 124, 255, 0.22);
+}
+
+:root[data-bs-theme='light'] .sr-sidebar .nav-link:hover,
+:root[data-bs-theme='light'] .sr-sidebar .nav-link.active {
+  color: #102439;
+  background: #e3ebf5;
+  border-color: rgba(92, 124, 255, 0.2);
+  box-shadow: inset 0 0 0 1px rgba(92, 124, 255, 0.06);
+}
+
+.sr-card {
+  border-radius: 18px;
+  border: 1px solid var(--sr-border);
+  background: var(--sr-card);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.sr-muted {
+  color: var(--sr-muted);
+}
+
+.btn-primary {
+  color: #ffffff;
+  border: 1px solid #5c7cff;
+  background: #5c7cff;
+}
+
+.btn-outline-secondary {
+  color: var(--sr-text);
+  border-color: var(--sr-border);
+  background: transparent;
+}
+
+.btn-outline-secondary:hover {
+  color: var(--sr-text);
+  border-color: rgba(92, 124, 255, 0.35);
+  background: rgba(92, 124, 255, 0.08);
+}
+
+:root[data-bs-theme='light'] .btn-outline-secondary {
+  color: #102439;
+  background: #ffffff;
+  border-color: rgba(18, 48, 74, 0.18);
+}
+
+:root[data-bs-theme='light'] .btn-outline-secondary:hover {
+  color: #102439;
+  border-color: rgba(92, 124, 255, 0.24);
+  background: #f3f6fb;
+}
+
+.dropdown-menu {
+  border-color: var(--sr-border);
+  background: rgba(12, 28, 43, 0.96);
+}
+
+.dropdown-item {
+  color: var(--sr-text);
+}
+
+:root[data-bs-theme='light'] .dropdown-menu {
+  background: rgba(255, 255, 255, 0.97);
+}
+
+:root[data-bs-theme='light'] .dropdown-item {
+  color: #102439;
+}
+
+.list-group-item {
+  color: var(--sr-text);
+  background: transparent;
+  border-color: var(--sr-border);
+}
+
+.table {
+  --bs-table-bg: transparent;
+  --bs-table-color: var(--sr-text);
+  --bs-table-border-color: var(--sr-border);
+}
+
+.sr-profile-tile {
+  height: 100%;
+  padding: 18px;
+  border-radius: 16px;
+  border: 1px solid var(--sr-border);
+  background: rgba(10, 23, 36, 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+:root[data-bs-theme='light'] .sr-profile-tile {
+  background: #f3f6fb;
+  color: #102439;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+}
+
+.sr-profile-tile strong {
+  font-size: 1.1rem;
+}

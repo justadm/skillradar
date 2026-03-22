@@ -1,0 +1,68 @@
+{
+  "overview": {
+    "digests": "2",
+    "saved": "14",
+    "marketPulse": "Backend +12%"
+  },
+  "digests": [
+    {
+      "query": "AI Backend Engineer, удалёнка, от 300k",
+      "lastSent": "сегодня в 09:00",
+      "status": "active",
+      "statusLabel": "Активен"
+    },
+    {
+      "query": "Ведущий разработчик Битрикс24, удалёнка, от 220k",
+      "lastSent": "вчера в 09:00",
+      "status": "active",
+      "statusLabel": "Активен"
+    }
+  ],
+  "saved": [
+    {
+      "title": "Senior Backend Engineer",
+      "company": "Acme Cloud",
+      "salary": "300–360k",
+      "mode": "remote"
+    },
+    {
+      "title": "Lead Platform Developer",
+      "company": "Data Grid",
+      "salary": "280–340k",
+      "mode": "hybrid"
+    },
+    {
+      "title": "Bitrix24 Team Lead",
+      "company": "Partner Hub",
+      "salary": "220–280k",
+      "mode": "remote"
+    }
+  ],
+  "queries": [
+    {
+      "query": "AI Backend Engineer, удалёнка, от 300k",
+      "market": "412 вакансий",
+      "updatedAt": "12 минут назад"
+    },
+    {
+      "query": "Bitrix24 Lead, удалёнка, от 220k",
+      "market": "58 вакансий",
+      "updatedAt": "1 час назад"
+    },
+    {
+      "query": "Node.js Platform, Europe remote",
+      "market": "196 вакансий",
+      "updatedAt": "вчера"
+    }
+  ],
+  "market": [
+    "Топ-навыки по вашим запросам: node.js, sql, docker, rest, ai integration",
+    "Удалёнка в целевых ролях: 61%",
+    "Медианная вилка по active queries: 260–320k"
+  ],
+  "profile": {
+    "role": "AI Backend Engineer",
+    "format": "Удалёнка / гибрид",
+    "salary": "от 300k"
+  }
+}

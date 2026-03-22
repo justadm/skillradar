@@ -6,8 +6,9 @@
           <h1 class="h3 fw-bold">Контакты</h1>
           <p class="text-secondary">Свяжитесь с нами, чтобы подключить пилот или получить демо.</p>
           <ul class="list-unstyled">
-            <li><strong>Email:</strong> hello@skillradar.ai</li>
-            <li><strong>Telegram:</strong> @skillradar_hr_bot</li>
+            <li><strong>Email:</strong> hello@gridai.ru</li>
+            <li><strong>Telegram Jobs:</strong> @GridAI_Careers_bot</li>
+            <li><strong>Telegram HR:</strong> @GridAI_Recruiter_bot</li>
           </ul>
         </div>
         <div class="col-lg-6">
@@ -72,7 +73,7 @@ const submit = async () => {
 };
 
 useHead(`
-  <title>SkillRadar — Контакты</title>
-  <meta name="description" content="Контакты SkillRadar." />
+  <title>GridAI — Контакты</title>
+  <meta name="description" content="Контакты GridAI." />
 `);
 </script>

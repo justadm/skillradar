@@ -58,7 +58,7 @@ onMounted(async () => {
 });
 
 useHead(`
-  <title>SkillRadar — Конкуренты</title>
+  <title>GridAI — Конкуренты</title>
   <meta name="robots" content="noindex,nofollow" />
 `);
 </script>

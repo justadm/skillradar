@@ -40,7 +40,7 @@ const cards = [
 ];
 
 useHead(`
-  <title>SkillRadar — Аналитика и отчёты</title>
+  <title>GridAI — Аналитика и отчёты</title>
   <meta name="description" content="Примеры B2B‑отчётов по рынку и конкурентам." />
 `);
 </script>

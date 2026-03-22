@@ -73,8 +73,9 @@ async function bootstrap() {
   });
 
   const port = Number(process.env.WEB_PORT || 3000);
-  await app.listen(port);
-  console.log(`[ssr] listening on http://localhost:${port}`);
+  const host = process.env.WEB_HOST || '0.0.0.0';
+  await app.listen(port, host);
+  console.log(`[ssr] listening on http://${host}:${port}`);
 }
 
 bootstrap();

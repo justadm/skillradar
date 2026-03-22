@@ -22,8 +22,8 @@ import PortalLeads from './pages/portal/PortalLeads.vue';
 import PortalAudit from './pages/portal/PortalAudit.vue';
 
 const routes: RouteRecordRaw[] = [
-  { path: '/admin', redirect: '/portal/settings' },
-  { path: '/admin/owner', redirect: '/portal/settings' },
+  { path: '/admin', redirect: '/hiring/settings' },
+  { path: '/admin/owner', redirect: '/hiring/settings' },
   {
     path: '/',
     component: LayoutDefault,
@@ -36,11 +36,13 @@ const routes: RouteRecordRaw[] = [
       { path: 'faq', component: FaqPage },
       { path: 'contacts', component: ContactsPage },
       { path: 'login', component: LoginPage },
+      { path: 'sign-in', redirect: '/login' },
+      { path: 'signin', redirect: '/login' },
       { path: 'ui-kit', component: UiKitPage }
     ]
   },
   {
-    path: '/portal',
+    path: '/hiring',
     component: LayoutPortal,
     children: [
       { path: '', component: PortalDashboard },

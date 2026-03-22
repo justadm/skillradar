@@ -211,13 +211,13 @@ const exportCsv = () => {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = 'skillradar-leads.csv';
+  link.download = 'gridai-leads.csv';
   link.click();
   URL.revokeObjectURL(url);
 };
 
 useHead(`
-  <title>SkillRadar — Заявки</title>
+  <title>GridAI — Заявки</title>
   <meta name="robots" content="noindex,nofollow" />
 `);
 </script>

@@ -28,7 +28,7 @@ const items = [
 ];
 
 useHead(`
-  <title>SkillRadar — FAQ</title>
-  <meta name="description" content="Ответы на вопросы по SkillRadar." />
+  <title>GridAI — FAQ</title>
+  <meta name="description" content="Ответы на вопросы по GridAI." />
 `);
 </script>

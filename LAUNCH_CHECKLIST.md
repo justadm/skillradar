@@ -1,4 +1,4 @@
-# Чек‑лист запуска SkillRadar (после HH)
+# Чек‑лист запуска GridAI (после HH)
 
 ## A. Инфраструктура
 - [ ] Доступ к серверу (Ubuntu) проверен.
@@ -21,22 +21,22 @@
 ## D. Deploy
 - [ ] Клонировать репо:
 ```bash
-git clone git@github.com:justadm/skillradar.git /opt/skillradar
-cd /opt/skillradar
+git clone git@github.com:justadm/gridai.git /opt/gridai
+cd /opt/gridai
 ```
 - [ ] `npm install`
 - [ ] Настроить `.env`
 - [ ] Установить systemd unit (system‑node):
 ```bash
-sudo cp /opt/skillradar/deploy/skillradar.systemnode.service /etc/systemd/system/skillradar.service
+sudo cp /opt/gridai/deploy/gridai.systemnode.service /etc/systemd/system/gridai.service
 sudo systemctl daemon-reload
-sudo systemctl enable skillradar
-sudo systemctl start skillradar
+sudo systemctl enable gridai
+sudo systemctl start gridai
 ```
 - [ ] Проверить статус:
 ```bash
-sudo systemctl status skillradar
-sudo tail -f /var/log/skillradar.log
+sudo systemctl status gridai
+sudo tail -f /var/log/gridai.log
 ```
 
 ## E. Тесты перед запуском
@@ -47,4 +47,4 @@ sudo tail -f /var/log/skillradar.log
 
 ## F. Мониторинг и откат
 - [ ] Быстрый откат: `USE_MOCKS=true`, перезапуск.
-- [ ] При падениях — смотреть `/var/log/skillradar.log`.
+- [ ] При падениях — смотреть `/var/log/gridai.log`.

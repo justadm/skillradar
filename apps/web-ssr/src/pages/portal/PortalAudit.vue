@@ -191,13 +191,13 @@ const exportCsv = () => {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = 'skillradar-audit.csv';
+  link.download = 'gridai-audit.csv';
   link.click();
   URL.revokeObjectURL(url);
 };
 
 useHead(`
-  <title>SkillRadar — Аудит</title>
+  <title>GridAI — Аудит</title>
   <meta name="robots" content="noindex,nofollow" />
 `);
 </script>

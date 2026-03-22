@@ -1,5 +1,10 @@
 const SRPortal = (() => {
   const qs = sel => document.querySelector(sel);
+  const authLoginUrl = () => (
+    window.location.hostname.endsWith('gridai.ru')
+      ? 'https://auth.gridai.ru/hiring'
+      : '/hiring'
+  );
 
   const badgeForStatus = status => {
     if (!status) return 'secondary';
@@ -37,13 +42,12 @@ const SRPortal = (() => {
         headers,
         credentials: useJson ? 'same-origin' : 'include'
       });
-      if (res.status === 401) {
-        throw new Error('UNAUTHORIZED');
-      }
+      if (res.status === 401) throw new Error('UNAUTHORIZED');
+      if (res.status === 403) throw new Error('FORBIDDEN');
       if (!res.ok) return null;
       return await res.json();
-    } catch {
-      return null;
+    } catch (error) {
+      return { __error: String(error?.message || 'UNKNOWN') };
     }
   };
 
@@ -248,11 +252,13 @@ const SRPortal = (() => {
     if (!page || !renderers[page]) return;
     showState('loading');
     const data = await loadJson(page);
-    if (!data) {
+    if (!data || data.__error) {
       showState('error');
       const error = qs('[data-sr-error]');
-      if (error && localStorage.getItem('sr-authed') !== '1' && String(getBase()).includes('/api')) {
-        error.innerHTML = 'Нужна авторизация. Откройте <a href=\"/login.html\">страницу входа</a>.';
+      if (error && String(getBase()).includes('/api') && data?.__error === 'UNAUTHORIZED') {
+        error.innerHTML = `Нужна авторизация. Откройте <a href="${authLoginUrl()}">страницу входа</a>.`;
+      } else if (error && data?.__error === 'FORBIDDEN') {
+        error.textContent = 'Недостаточно прав для этого раздела.';
       }
       return;
     }

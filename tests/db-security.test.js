@@ -31,7 +31,7 @@ function loadDbModule(tmpFile, bootstrapEmail = '') {
 }
 
 function makeTmpDbPath(name) {
-  return path.join(os.tmpdir(), `skillradar-${name}-${Date.now()}-${Math.random().toString(16).slice(2)}.sqlite`);
+  return path.join(os.tmpdir(), `gridai-${name}-${Date.now()}-${Math.random().toString(16).slice(2)}.sqlite`);
 }
 
 test('auth token is one-time and expires by consume', (t) => {

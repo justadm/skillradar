@@ -1,0 +1,16 @@
+[Unit]
+Description=GridAI Telegram Bot (system node)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/gridai
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node /opt/gridai/src/index.js
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/gridai.log
+StandardError=append:/var/log/gridai.log
+
+[Install]
+WantedBy=multi-user.target

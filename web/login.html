@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>SkillRadar — Вход</title>
+    <title>GridAI — Вход</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <script>
       (() => {
@@ -18,9 +18,41 @@
   <body>
     <nav class="navbar navbar-expand-lg bg-body-tertiary border-bottom sticky-top">
       <div class="container">
-        <a class="navbar-brand d-flex align-items-center fw-semibold" href="index.html">
-          <span class="sr-logo">SR</span>
-          SkillRadar
+        <a class="navbar-brand sr-brand" href="index.html">
+          <span class="sr-brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="64" height="64" rx="16" fill="url(#bg)" />
+              <rect x="12" y="14" width="24" height="24" rx="7" fill="#0F2033" stroke="#284A66" stroke-width="1.5" />
+              <rect x="15.5" y="17.5" width="5.5" height="5.5" rx="2" fill="#16324B" />
+              <rect x="23" y="17.5" width="5.5" height="5.5" rx="2" fill="url(#accent)" />
+              <rect x="30.5" y="17.5" width="2.5" height="5.5" rx="1.25" fill="#16324B" />
+              <rect x="15.5" y="25" width="5.5" height="5.5" rx="2" fill="url(#accent)" />
+              <rect x="23" y="25" width="5.5" height="5.5" rx="2" fill="#16324B" />
+              <rect x="30.5" y="25" width="2.5" height="5.5" rx="1.25" fill="url(#signal)" />
+              <rect x="15.5" y="32.5" width="5.5" height="2.5" rx="1.25" fill="#16324B" />
+              <rect x="23" y="32.5" width="5.5" height="2.5" rx="1.25" fill="url(#signal)" />
+              <rect x="30.5" y="32.5" width="2.5" height="2.5" rx="1.25" fill="#16324B" />
+              <path d="M45 18C49.4183 18 53 21.5817 53 26V31H48.5V26.5C48.5 24.0147 46.4853 22 44 22H41.5V18H45Z" fill="#EAF8FF" />
+              <path d="M44 31H53V35.5H41.5V26H46V30C46 30.5523 45.5523 31 45 31H44Z" fill="#EAF8FF" />
+              <path d="M41.5 43H53" stroke="#2AE4C8" stroke-width="3.2" stroke-linecap="round" />
+              <path d="M41.5 49H50" stroke="#FDD76B" stroke-width="3.2" stroke-linecap="round" />
+              <defs>
+                <linearGradient id="bg" x1="6" y1="4" x2="58" y2="60" gradientUnits="userSpaceOnUse">
+                  <stop stop-color="#0A1626" />
+                  <stop offset="1" stop-color="#12304A" />
+                </linearGradient>
+                <linearGradient id="accent" x1="18" y1="18" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+                  <stop stop-color="#2AE4C8" />
+                  <stop offset="1" stop-color="#31AFFF" />
+                </linearGradient>
+                <linearGradient id="signal" x1="31" y1="21" x2="38" y2="28" gradientUnits="userSpaceOnUse">
+                  <stop stop-color="#FDD76B" />
+                  <stop offset="1" stop-color="#FF944D" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </span>
+          <span class="sr-brand-title">GridAI</span>
         </a>
         <div class="d-flex align-items-center gap-2">
           <div class="dropdown">
@@ -33,45 +65,320 @@
               <li><button class="dropdown-item" data-sr-theme="auto">Авто</button></li>
             </ul>
           </div>
-          <a class="btn btn-outline-secondary" href="portal/dashboard.html">Портал</a>
+          <a class="btn btn-outline-secondary" href="https://career.gridai.ru">Career</a>
+          <a class="btn btn-primary" href="https://hiring.gridai.ru">Hiring</a>
         </div>
       </div>
     </nav>
 
-    <main class="sr-section">
+    <main class="sr-auth-page">
       <div class="container">
         <div class="row justify-content-center">
-          <div class="col-lg-6">
-            <div class="card sr-card">
-              <div class="card-body">
-                <h1 class="h4 fw-semibold mb-3">Вход в SkillRadar</h1>
-                <p class="sr-muted">Введите email, получите магическую ссылку (в dev вернём токен).</p>
+          <div class="col-xl-6 col-lg-7">
+            <div class="sr-auth-shell">
+              <div class="text-center mb-4">
+                <div class="sr-auth-intents">
+                  <button type="button" class="sr-intent-chip" data-auth-intent="career">Я ищу работу</button>
+                  <button type="button" class="sr-intent-chip" data-auth-intent="hiring">Мне нужна аналитика найма</button>
+                </div>
+                <h1 class="sr-auth-title" data-auth-copy="career">Вход в Career</h1>
+                <h1 class="sr-auth-title d-none" data-auth-copy="hiring">Вход в Hiring</h1>
+                <p class="sr-auth-subtitle" data-auth-copy="career">Войдите в GridAI через careers-ботов, соцвход или резервный email-код.</p>
+                <p class="sr-auth-subtitle d-none" data-auth-copy="hiring">Войдите в GridAI через recruiter-ботов, соцвход или резервный email-код.</p>
+              </div>
 
-                <form id="login-form" class="mb-3">
-                  <label class="form-label" for="email">Email</label>
-                  <div class="input-group">
-                    <input id="email" type="email" class="form-control" placeholder="you@company.com" required />
-                    <button class="btn btn-primary" type="submit">Отправить</button>
+              <div class="sr-auth-card">
+                <div id="oauth-block" class="d-none">
+                  <div class="sr-provider-list" id="oauth-providers"></div>
+                  <div class="sr-auth-divider">
+                    <span></span>
+                    <strong>или резервный вход</strong>
+                    <span></span>
                   </div>
+                </div>
+
+                <form id="login-form" class="sr-auth-form">
+                  <label class="sr-auth-label" for="email">Адрес электронной почты</label>
+                  <input id="email" type="email" class="sr-auth-input" placeholder="you@company.com" required />
+                  <button class="btn btn-light sr-auth-submit" type="submit">Продолжить</button>
                 </form>
 
-                <div id="login-result" class="alert alert-info d-none"></div>
+                <div id="login-result" class="alert alert-info d-none mt-3"></div>
 
-                <form id="verify-form" class="mt-4">
-                  <label class="form-label" for="token">Токен</label>
-                  <div class="input-group">
-                    <input id="token" type="text" class="form-control" placeholder="код из email" required />
-                    <button class="btn btn-outline-secondary" type="submit">Подтвердить</button>
-                  </div>
+                <div class="sr-auth-support">
+                  <span class="sr-muted">Нет доступа?</span>
+                  <button id="request-invite" type="button" class="sr-link-button">Запросить приглашение</button>
+                </div>
+
+                <div id="invite-result" class="alert alert-success d-none mt-3"></div>
+
+                <form id="verify-form" class="sr-auth-form mt-4">
+                  <label class="sr-auth-label" for="token">Код или токен из письма</label>
+                  <input id="token" type="text" class="sr-auth-input" placeholder="вставьте код из письма" required />
+                  <button class="btn btn-outline-light sr-auth-secondary" type="submit">Подтвердить вход</button>
                 </form>
 
                 <div id="verify-result" class="alert alert-success d-none mt-3"></div>
+
+                <div class="sr-auth-legal">
+                  <a href="/privacy">Политика конфиденциальности</a>
+                  <span>|</span>
+                  <a href="mailto:hello@gridai.ru">Поддержка</a>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
     </main>
+
+    <style>
+      .sr-auth-page {
+        min-height: calc(100vh - 72px);
+        display: flex;
+        align-items: center;
+        padding: 56px 0 72px;
+      }
+
+      .sr-auth-shell {
+        max-width: 680px;
+        margin: 0 auto;
+      }
+
+      .sr-auth-intents {
+        display: inline-flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-bottom: 18px;
+      }
+
+      .sr-intent-chip {
+        min-height: 44px;
+        padding: 0 18px;
+        border-radius: 999px;
+        border: 1px solid var(--sr-border);
+        background: rgba(15, 32, 51, 0.62);
+        color: var(--sr-muted);
+        font: inherit;
+        transition: all 0.2s ease;
+      }
+
+      .sr-intent-chip.active {
+        color: #08121f;
+        border-color: rgba(42, 228, 200, 0.36);
+        background: linear-gradient(135deg, rgba(42, 228, 200, 0.96), rgba(49, 175, 255, 0.88));
+      }
+
+      .sr-auth-title {
+        font-size: clamp(2.6rem, 5vw, 4.2rem);
+        line-height: 1.02;
+        margin: 0 0 12px;
+      }
+
+      .sr-auth-subtitle {
+        color: var(--sr-muted);
+        font-size: 1.05rem;
+        margin: 0;
+      }
+
+      .sr-auth-card {
+        margin-top: 28px;
+        padding: 36px 32px 28px;
+        border-radius: 32px;
+        border: 1px solid var(--sr-border);
+        background: rgba(12, 28, 43, 0.7);
+        backdrop-filter: blur(18px);
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.22);
+      }
+
+      .sr-auth-form {
+        display: grid;
+        gap: 18px;
+      }
+
+      .sr-auth-label {
+        color: #87a3ff;
+        font-size: 0.95rem;
+        letter-spacing: 0.01em;
+        padding-left: 18px;
+      }
+
+      .sr-auth-input {
+        width: 100%;
+        min-height: 72px;
+        padding: 0 28px;
+        border-radius: 999px;
+        border: 2px solid rgba(135, 163, 255, 0.9);
+        background: transparent;
+        color: var(--sr-text);
+        font-size: 1.05rem;
+        outline: none;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+      }
+
+      .sr-auth-input::placeholder {
+        color: rgba(139, 188, 229, 0.68);
+      }
+
+      .sr-auth-input:focus {
+        border-color: var(--sr-accent-2);
+        box-shadow: 0 0 0 6px rgba(49, 175, 255, 0.12);
+      }
+
+      .sr-auth-submit,
+      .sr-auth-secondary,
+      .sr-provider-btn {
+        min-height: 72px;
+        border-radius: 999px;
+        font-size: 1rem;
+        font-weight: 500;
+      }
+
+      :root[data-bs-theme='light'] .sr-intent-chip {
+        background: rgba(255, 255, 255, 0.84);
+        color: #36536f;
+      }
+
+      .sr-auth-submit {
+        color: #102439;
+      }
+
+      .sr-auth-secondary {
+        border-width: 1.5px;
+      }
+
+      .sr-auth-support {
+        margin: 24px 0 4px;
+        text-align: center;
+        font-size: 1rem;
+      }
+
+      .sr-auth-support a,
+      .sr-auth-legal a {
+        color: #9fb5ff;
+        text-decoration: none;
+      }
+
+      .sr-link-button {
+        border: 0;
+        padding: 0;
+        background: transparent;
+        color: #9fb5ff;
+        text-decoration: none;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      .sr-auth-support a:hover,
+      .sr-link-button:hover,
+      .sr-auth-legal a:hover {
+        text-decoration: underline;
+      }
+
+      .sr-auth-divider {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin: 28px 0 20px;
+        color: var(--sr-text);
+      }
+
+      .sr-auth-divider span {
+        flex: 1;
+        height: 1px;
+        background: rgba(234, 248, 255, 0.4);
+      }
+
+      .sr-provider-list {
+        display: grid;
+        gap: 14px;
+      }
+
+      .sr-provider-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        width: 100%;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.02);
+        color: var(--sr-text);
+        text-decoration: none;
+      }
+
+      .sr-provider-btn:hover {
+        border-color: rgba(49, 175, 255, 0.3);
+        background: rgba(49, 175, 255, 0.08);
+      }
+
+      .sr-provider-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        text-align: center;
+      }
+
+      .sr-auth-legal {
+        margin-top: 28px;
+        display: flex;
+        justify-content: center;
+        gap: 14px;
+        color: var(--sr-muted);
+        font-size: 0.95rem;
+      }
+
+      :root[data-bs-theme='light'] .sr-auth-card {
+        background: rgba(255, 255, 255, 0.78);
+      }
+
+      :root[data-bs-theme='light'] .sr-auth-label {
+        color: #6f88ef;
+      }
+
+      :root[data-bs-theme='light'] .sr-auth-input {
+        border-color: rgba(111, 136, 239, 0.92);
+        background: rgba(255, 255, 255, 0.9);
+        color: #102439;
+      }
+
+      :root[data-bs-theme='light'] .sr-auth-input::placeholder {
+        color: rgba(79, 111, 138, 0.8);
+      }
+
+      :root[data-bs-theme='light'] .sr-provider-btn {
+        border-color: rgba(18, 48, 74, 0.12);
+        background: rgba(255, 255, 255, 0.72);
+        color: #102439;
+      }
+
+      :root[data-bs-theme='light'] .sr-provider-btn:hover {
+        background: rgba(220, 233, 244, 0.96);
+      }
+
+      :root[data-bs-theme='light'] .sr-auth-divider span {
+        background: rgba(18, 48, 74, 0.18);
+      }
+
+      @media (max-width: 768px) {
+        .sr-auth-card {
+          padding: 28px 20px 24px;
+          border-radius: 24px;
+        }
+
+        .sr-auth-page {
+          padding-top: 32px;
+        }
+
+        .sr-auth-submit,
+        .sr-auth-secondary,
+        .sr-provider-btn,
+        .sr-auth-input {
+          min-height: 64px;
+        }
+      }
+    </style>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="theme.js"></script>

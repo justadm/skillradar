@@ -6,3 +6,5 @@ node_modules
 /.npm-cache/
 /dist/
 /.docs/
+.DS_Store
+/output/

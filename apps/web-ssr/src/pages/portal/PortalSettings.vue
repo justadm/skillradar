@@ -101,7 +101,7 @@ const connectHh = async () => {
 onMounted(reloadSettings);
 
 useHead(`
-  <title>SkillRadar — Настройки</title>
+  <title>GridAI — Настройки</title>
   <meta name="robots" content="noindex,nofollow" />
 `);
 </script>

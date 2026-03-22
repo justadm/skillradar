@@ -11,7 +11,7 @@ export function createApp() {
 
   if (isClient) {
     router.beforeEach((to) => {
-      if (!to.path.startsWith('/portal')) return true;
+      if (!to.path.startsWith('/hiring')) return true;
       const authed = localStorage.getItem('sr-authed') === '1';
       if (authed) return true;
       sessionStorage.setItem('sr-redirect', to.fullPath);

@@ -64,7 +64,7 @@ onMounted(async () => {
 });
 
 useHead(`
-  <title>SkillRadar — Шаблон вакансии</title>
+  <title>GridAI — Шаблон вакансии</title>
   <meta name="robots" content="noindex,nofollow" />
 `);
 </script>

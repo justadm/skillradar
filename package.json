@@ -1,5 +1,5 @@
 {
-  "name": "skillradar-bot",
+  "name": "gridai-bot",
   "version": "0.1.0",
   "private": true,
   "type": "commonjs",
@@ -10,7 +10,9 @@
     "build:ssr": "vite build --config apps/web-ssr/vite.config.ts && vite build --config apps/web-ssr/vite.config.ssr.ts && tsc",
     "start:ssr": "node dist/ssr/src/ssr/main.js",
     "lint": "node scripts/lint.js",
-    "test": "node --test tests/**/*.test.js"
+    "test": "node --test tests/**/*.test.js",
+    "hh:search": "node scripts/hh-search.js",
+    "digest:daily": "node src/run-daily-digest.js"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.8",

@@ -118,7 +118,7 @@ onMounted(async () => {
 });
 
 useHead(`
-  <title>SkillRadar — Дашборд</title>
+  <title>GridAI — Дашборд</title>
   <meta name="robots" content="noindex,nofollow" />
 `);
 </script>

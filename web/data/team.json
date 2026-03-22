@@ -1,6 +1,6 @@
 {
   "members": [
-    {"id": "user_1", "name": "Константин Т.", "email": "owner@skillradar.ai", "role": "owner", "access": "Active"},
+    {"id": "user_1", "name": "Константин Т.", "email": "owner@gridai.ru", "role": "owner", "access": "Active"},
     {"id": "user_2", "name": "HR Lead", "email": "hr@company.com", "role": "admin", "access": "Active"},
     {"id": "user_3", "name": "Recruiter", "email": "recruit@company.com", "role": "viewer", "access": "Invitation pending"}
   ]

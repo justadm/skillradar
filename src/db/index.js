@@ -142,10 +142,55 @@ function initDb() {
       last_error_at TEXT,
       last_error TEXT
     );
+    CREATE TABLE IF NOT EXISTS job_digest_subscriptions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      tg_id TEXT NOT NULL,
+      bot_key TEXT NOT NULL DEFAULT 'jobs',
+      raw_query TEXT NOT NULL,
+      criteria_json TEXT,
+      cadence TEXT NOT NULL DEFAULT 'daily',
+      timezone TEXT,
+      active INTEGER NOT NULL DEFAULT 1,
+      last_run_at TEXT,
+      last_success_at TEXT,
+      last_error TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE(user_id, raw_query, cadence)
+    );
+    CREATE TABLE IF NOT EXISTS job_digest_deliveries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      subscription_id INTEGER NOT NULL,
+      vacancy_id TEXT NOT NULL,
+      sent_at TEXT NOT NULL,
+      UNIQUE(subscription_id, vacancy_id)
+    );
+    CREATE TABLE IF NOT EXISTS bot_consents (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      bot_key TEXT NOT NULL,
+      consented_at TEXT NOT NULL,
+      UNIQUE(user_id, bot_key)
+    );
+    CREATE TABLE IF NOT EXISTS social_auth_accounts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      provider TEXT NOT NULL,
+      external_user_id TEXT NOT NULL,
+      email TEXT,
+      profile_json TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE(provider, external_user_id),
+      UNIQUE(user_id, provider)
+    );
   `);
 
   ensureColumn('users', 'mode', 'TEXT', 'jobseeker');
+  ensureColumn('users', 'consented_at', 'TEXT', '');
   ensureColumn('audit_logs', 'org_id', 'TEXT', '');
+  ensureColumn('job_digest_subscriptions', 'bot_key', 'TEXT', 'jobs');
 }
 
 function ensureColumn(table, column, type, defaultValue) {
@@ -209,6 +254,22 @@ function getUserMode(userId) {
   return row?.mode || 'jobseeker';
 }
 
+function hasUserConsent(userId, botKey = 'combined') {
+  const db = getDb();
+  const row = db.prepare('SELECT consented_at FROM bot_consents WHERE user_id = ? AND bot_key = ?').get(userId, String(botKey || 'combined'));
+  return Boolean(row?.consented_at);
+}
+
+function markUserConsent(userId, botKey = 'combined', consentedAt = new Date().toISOString()) {
+  const db = getDb();
+  db.prepare(`
+    INSERT INTO bot_consents (user_id, bot_key, consented_at)
+    VALUES (?, ?, ?)
+    ON CONFLICT(user_id, bot_key) DO UPDATE SET
+      consented_at = excluded.consented_at
+  `).run(userId, String(botKey || 'combined'), consentedAt);
+}
+
 function getVacancyCache(vacancyId) {
   const db = getDb();
   return db.prepare('SELECT raw_json, fetched_at FROM vacancies_cache WHERE vacancy_id = ?').get(vacancyId);
@@ -267,7 +328,7 @@ function ensureDefaultOrg() {
   if (existing) return existing.id;
   const id = require('crypto').randomUUID();
   db.prepare('INSERT INTO orgs (id, name, created_at) VALUES (?, ?, ?)')
-    .run(id, process.env.DEFAULT_ORG_NAME || 'SkillRadar Demo', new Date().toISOString());
+    .run(id, process.env.DEFAULT_ORG_NAME || `${process.env.BRAND_NAME || 'GridAI'} Demo`, new Date().toISOString());
   return id;
 }
 
@@ -322,6 +383,87 @@ function deleteSession(token) {
 function getWebUserById(userId) {
   const db = getDb();
   return db.prepare('SELECT * FROM web_users WHERE id = ?').get(userId);
+}
+
+function getSocialAuthAccount(provider, externalUserId) {
+  const db = getDb();
+  return db.prepare(`
+    SELECT * FROM social_auth_accounts
+    WHERE provider = ? AND external_user_id = ?
+  `).get(String(provider || '').toLowerCase(), String(externalUserId || ''));
+}
+
+function getWebUserBySocialAccount(provider, externalUserId) {
+  const db = getDb();
+  const account = getSocialAuthAccount(provider, externalUserId);
+  if (!account) return null;
+  return db.prepare('SELECT * FROM web_users WHERE id = ?').get(account.user_id);
+}
+
+function upsertSocialAuthAccount(userId, provider, externalUserId, payload = {}) {
+  const db = getDb();
+  const now = new Date().toISOString();
+  db.prepare(`
+    INSERT INTO social_auth_accounts (
+      user_id, provider, external_user_id, email, profile_json, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(provider, external_user_id) DO UPDATE SET
+      user_id = excluded.user_id,
+      email = excluded.email,
+      profile_json = excluded.profile_json,
+      updated_at = excluded.updated_at
+  `).run(
+    String(userId || ''),
+    String(provider || '').toLowerCase(),
+    String(externalUserId || ''),
+    payload.email ? String(payload.email).toLowerCase() : null,
+    JSON.stringify(payload.profile || {}),
+    now,
+    now
+  );
+  return getSocialAuthAccount(provider, externalUserId);
+}
+
+function canAutoCreateSocialUser(provider) {
+  const raw = String(process.env.SOCIAL_AUTH_AUTO_CREATE_PROVIDERS || '')
+    .split(',')
+    .map(v => v.trim().toLowerCase())
+    .filter(Boolean);
+  return raw.includes(String(provider || '').toLowerCase());
+}
+
+function createSocialAuthUser(provider, externalUserId, payload = {}) {
+  const normalizedProvider = String(provider || '').toLowerCase();
+  if (!canAutoCreateSocialUser(normalizedProvider)) return null;
+  const db = getDb();
+  const orgId = ensureDefaultOrg();
+  const id = require('crypto').randomUUID();
+  const normalizedEmail = String(payload.email || '').trim().toLowerCase();
+  const syntheticEmail = `${normalizedProvider}+${String(externalUserId || '').replace(/[^a-zA-Z0-9._-]/g, '_')}@auth.gridai.local`;
+  const email = normalizedEmail || syntheticEmail;
+  const name = String(
+    payload.name
+    || payload.username
+    || normalizedEmail
+    || `${normalizedProvider}:${externalUserId}`
+  ).trim().slice(0, 120);
+  const role = String(payload.role || 'viewer').trim().toLowerCase() || 'viewer';
+  db.prepare('INSERT INTO web_users (id, email, name, role, org_id, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run(id, email, name || email, role, orgId, 'active', new Date().toISOString());
+  return db.prepare('SELECT * FROM web_users WHERE id = ?').get(id);
+}
+
+function elevateWebUserRole(userId, role) {
+  const db = getDb();
+  const user = db.prepare('SELECT * FROM web_users WHERE id = ?').get(String(userId || ''));
+  if (!user) return null;
+  const rank = { viewer: 0, analyst: 1, admin: 2, owner: 3 };
+  const current = rank[String(user.role || 'viewer').toLowerCase()] ?? 0;
+  const targetRole = String(role || '').trim().toLowerCase();
+  const target = rank[targetRole] ?? current;
+  if (target <= current) return user;
+  db.prepare('UPDATE web_users SET role = ? WHERE id = ?').run(targetRole, user.id);
+  return db.prepare('SELECT * FROM web_users WHERE id = ?').get(user.id);
 }
 
 function listReports(orgId, limit = 20, offset = 0) {
@@ -737,6 +879,129 @@ function markHhApiError(errorText) {
     .run(String(errorText || 'Unknown error').slice(0, 512), new Date().toISOString());
 }
 
+function upsertJobDigestSubscription(userId, tgId, rawQuery, criteria = null, options = {}) {
+  const db = getDb();
+  const now = new Date().toISOString();
+  const cadence = String(options.cadence || 'daily').trim() || 'daily';
+  const timezone = options.timezone ? String(options.timezone).trim() : null;
+  const botKey = String(options.botKey || 'jobs').trim() || 'jobs';
+  const criteriaJson = criteria ? JSON.stringify(criteria) : null;
+  db.prepare(`
+    INSERT INTO job_digest_subscriptions
+      (user_id, tg_id, bot_key, raw_query, criteria_json, cadence, timezone, active, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+    ON CONFLICT(user_id, raw_query, cadence) DO UPDATE SET
+      tg_id=excluded.tg_id,
+      bot_key=excluded.bot_key,
+      criteria_json=COALESCE(excluded.criteria_json, job_digest_subscriptions.criteria_json),
+      timezone=COALESCE(excluded.timezone, job_digest_subscriptions.timezone),
+      active=1,
+      updated_at=excluded.updated_at
+  `).run(userId, String(tgId), botKey, String(rawQuery || '').trim(), criteriaJson, cadence, timezone, now, now);
+
+  return db.prepare(`
+    SELECT * FROM job_digest_subscriptions
+    WHERE user_id = ? AND raw_query = ? AND cadence = ?
+  `).get(userId, String(rawQuery || '').trim(), cadence);
+}
+
+function listActiveJobDigestSubscriptions(limit = 100, offset = 0) {
+  const db = getDb();
+  return db.prepare(`
+    SELECT *
+    FROM job_digest_subscriptions
+    WHERE active = 1 AND cadence = 'daily'
+    ORDER BY id ASC
+    LIMIT ? OFFSET ?
+  `).all(limit, offset);
+}
+
+function listUserJobDigestSubscriptions(userId) {
+  const db = getDb();
+  return db.prepare(`
+    SELECT *
+    FROM job_digest_subscriptions
+    WHERE user_id = ?
+    ORDER BY active DESC, id ASC
+  `).all(userId);
+}
+
+function getUserJobDigestSubscriptionById(userId, subscriptionId) {
+  const db = getDb();
+  return db.prepare(`
+    SELECT *
+    FROM job_digest_subscriptions
+    WHERE user_id = ? AND id = ?
+  `).get(userId, subscriptionId);
+}
+
+function updateUserJobDigestSubscription(userId, subscriptionId, patch = {}) {
+  const db = getDb();
+  const existing = getUserJobDigestSubscriptionById(userId, subscriptionId);
+  if (!existing) return null;
+  const now = new Date().toISOString();
+  const rawQuery = patch.raw_query !== undefined ? String(patch.raw_query || '').trim() : existing.raw_query;
+  const criteriaJson = patch.criteria_json !== undefined
+    ? (patch.criteria_json ? JSON.stringify(patch.criteria_json) : null)
+    : existing.criteria_json;
+  const timezone = patch.timezone !== undefined ? (patch.timezone ? String(patch.timezone).trim() : null) : existing.timezone;
+  const botKey = patch.bot_key !== undefined ? String(patch.bot_key || 'jobs').trim() || 'jobs' : existing.bot_key;
+  const active = patch.active !== undefined ? (patch.active ? 1 : 0) : existing.active;
+  db.prepare(`
+    UPDATE job_digest_subscriptions
+    SET bot_key = ?,
+        raw_query = ?,
+        criteria_json = ?,
+        timezone = ?,
+        active = ?,
+        updated_at = ?
+    WHERE id = ? AND user_id = ?
+  `).run(botKey, rawQuery, criteriaJson, timezone, active, now, subscriptionId, userId);
+  return getUserJobDigestSubscriptionById(userId, subscriptionId);
+}
+
+function deactivateUserJobDigestSubscription(userId, subscriptionId) {
+  return updateUserJobDigestSubscription(userId, subscriptionId, { active: 0 });
+}
+
+function listJobDigestDeliveryVacancyIds(subscriptionId) {
+  const db = getDb();
+  return db.prepare(`
+    SELECT vacancy_id
+    FROM job_digest_deliveries
+    WHERE subscription_id = ?
+  `).all(subscriptionId).map(row => String(row.vacancy_id));
+}
+
+function saveJobDigestDeliveries(subscriptionId, vacancyIds, sentAt = new Date().toISOString()) {
+  const db = getDb();
+  const insert = db.prepare(`
+    INSERT OR IGNORE INTO job_digest_deliveries (subscription_id, vacancy_id, sent_at)
+    VALUES (?, ?, ?)
+  `);
+  const tx = db.transaction((ids) => {
+    for (const vacancyId of ids) {
+      insert.run(subscriptionId, String(vacancyId), sentAt);
+    }
+  });
+  tx(vacancyIds);
+}
+
+function markJobDigestSubscriptionRun(subscriptionId, payload = {}) {
+  const db = getDb();
+  const now = payload.ranAt || new Date().toISOString();
+  const lastSuccessAt = payload.success ? now : payload.lastSuccessAt || null;
+  const lastError = payload.success ? null : String(payload.error || '').slice(0, 512) || null;
+  db.prepare(`
+    UPDATE job_digest_subscriptions
+    SET last_run_at = ?,
+        last_success_at = COALESCE(?, last_success_at),
+        last_error = ?,
+        updated_at = ?
+    WHERE id = ?
+  `).run(now, lastSuccessAt, lastError, now, subscriptionId);
+}
+
 module.exports = {
   initDb,
   getDb,
@@ -754,6 +1019,8 @@ module.exports = {
   listRecentQueries,
   setUserMode,
   getUserMode,
+  hasUserConsent,
+  markUserConsent,
   createAuthToken,
   consumeAuthToken,
   createSession,
@@ -762,6 +1029,11 @@ module.exports = {
   getWebUserForLogin,
   createBootstrapOwnerIfAllowed,
   getWebUserById,
+  getSocialAuthAccount,
+  getWebUserBySocialAccount,
+  upsertSocialAuthAccount,
+  createSocialAuthUser,
+  elevateWebUserRole,
   listReports,
   listReportsFiltered,
   countReports,
@@ -791,5 +1063,14 @@ module.exports = {
   saveHhToken,
   getHhToken,
   markHhApiSuccess,
-  markHhApiError
+  markHhApiError,
+  upsertJobDigestSubscription,
+  listActiveJobDigestSubscriptions,
+  listUserJobDigestSubscriptions,
+  getUserJobDigestSubscriptionById,
+  updateUserJobDigestSubscription,
+  deactivateUserJobDigestSubscription,
+  listJobDigestDeliveryVacancyIds,
+  saveJobDigestDeliveries,
+  markJobDigestSubscriptionRun
 };

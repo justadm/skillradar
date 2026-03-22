@@ -11,7 +11,7 @@
           </p>
           <div class="d-flex flex-wrap gap-2">
             <RouterLink class="btn btn-primary btn-lg" to="/pricing">Смотреть тарифы</RouterLink>
-            <a class="btn btn-outline-secondary btn-lg" href="https://t.me/skillradar_hr_bot" target="_blank" rel="noreferrer">
+            <a class="btn btn-outline-secondary btn-lg" href="https://t.me/GridAI_Recruiter_bot" target="_blank" rel="noreferrer">
               Открыть Telegram
             </a>
           </div>
@@ -101,7 +101,7 @@ import { useHead } from '../composables/useHead';
 import { RouterLink } from 'vue-router';
 
 useHead(`
-  <title>SkillRadar — B2B‑аналитика для HR</title>
+  <title>GridAI — B2B‑аналитика для HR</title>
   <meta name="description" content="B2B‑аналитика по ролям: рынок, конкуренты, шаблоны вакансий." />
 `);
 </script>

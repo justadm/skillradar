@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const PID_PATH = '/tmp/skillradar-bot.pid';
+const PID_PATH = '/tmp/gridai-bot.pid';
 
 function ensureSingleInstance() {
   if (fs.existsSync(PID_PATH)) {
@@ -47,7 +47,24 @@ function main() {
   initDb();
   const disableBot = String(process.env.DISABLE_BOT || '').toLowerCase() === 'true';
   const disableWeb = String(process.env.DISABLE_WEB || '').toLowerCase() === 'true';
-  if (!disableBot) startBot();
+  if (!disableBot) {
+    const jobsToken = process.env.TELEGRAM_BOT_TOKEN_JOBS;
+    const hrToken = process.env.TELEGRAM_BOT_TOKEN_HR;
+    const legacyToken = process.env.TELEGRAM_BOT_TOKEN;
+
+    if (jobsToken || hrToken) {
+      if (jobsToken) {
+        startBot({ audience: 'jobs', token: jobsToken });
+      }
+      if (hrToken) {
+        startBot({ audience: 'hr', token: hrToken });
+      }
+    } else if (legacyToken) {
+      startBot({ audience: 'combined', token: legacyToken });
+    } else {
+      throw new Error('No Telegram bot token configured');
+    }
+  }
   if (!disableWeb) startWebServer();
 }
 

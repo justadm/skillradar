@@ -185,7 +185,7 @@ const performDelete = async () => {
 };
 
 useHead(`
-  <title>SkillRadar — Профили ролей</title>
+  <title>GridAI — Профили ролей</title>
   <meta name="robots" content="noindex,nofollow" />
 `);
 </script>

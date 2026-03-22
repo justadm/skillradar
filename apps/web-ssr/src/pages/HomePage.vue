@@ -6,12 +6,12 @@
           <p class="text-uppercase text-primary fw-semibold small">TG‑бот + рынок навыков</p>
           <h1 class="display-5 fw-bold">Находим вакансии и объясняем, почему они подходят.</h1>
           <p class="lead text-secondary">
-            SkillRadar превращает запрос в фильтры рынка и выдаёт топ‑вакансии с пояснениями.
+            GridAI превращает запрос в фильтры рынка и выдаёт топ‑вакансии с пояснениями.
             Для HR — быстрые отчёты по роли, навыкам, зарплатам и конкурентам.
           </p>
           <div class="d-flex flex-wrap gap-2">
             <RouterLink class="btn btn-primary btn-lg" to="/pricing">Запустить пилот</RouterLink>
-            <a class="btn btn-outline-secondary btn-lg" href="https://t.me/skillradar_hr_bot" target="_blank" rel="noreferrer">
+            <a class="btn btn-outline-secondary btn-lg" href="https://t.me/GridAI_Careers_bot" target="_blank" rel="noreferrer">
               Открыть в Telegram
             </a>
           </div>
@@ -171,9 +171,9 @@ import { useHead } from '../composables/useHead';
 import { RouterLink } from 'vue-router';
 
 useHead(`
-  <title>SkillRadar — умный подбор вакансий и HR‑аналитика</title>
-  <meta name="description" content="SkillRadar — телеграм‑бот для подбора вакансий, рынка навыков и HR‑аналитики." />
-  <meta property="og:title" content="SkillRadar — умный подбор вакансий и HR‑аналитика" />
+  <title>GridAI — AI‑подбор вакансий и HR‑аналитика</title>
+  <meta name="description" content="GridAI — AI‑платформа для подбора вакансий, рынка навыков и HR‑аналитики." />
+  <meta property="og:title" content="GridAI — AI‑подбор вакансий и HR‑аналитика" />
   <meta property="og:description" content="Подбор вакансий, рынок навыков и B2B‑аналитика для HR." />
   <meta property="og:type" content="website" />
 `);

@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>SkillRadar — умный подбор вакансий и HR‑аналитика</title>
+    <title>GridAI — умный подбор вакансий и HR‑аналитика</title>
     <meta
       name="description"
-      content="SkillRadar — телеграм‑бот для подбора вакансий и рынка навыков. B2B‑аналитика для HR и рекрутеров."
+      content="GridAI — телеграм‑бот для подбора вакансий и рынка навыков. B2B‑аналитика для HR и рекрутеров."
     />
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <script>
@@ -22,9 +22,41 @@
   <body>
     <nav class="navbar navbar-expand-lg bg-body-tertiary border-bottom sticky-top">
       <div class="container">
-        <a class="navbar-brand d-flex align-items-center fw-semibold" href="#top">
-          <span class="sr-logo">SR</span>
-          SkillRadar
+        <a class="navbar-brand sr-brand" href="#top">
+          <span class="sr-brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="64" height="64" rx="16" fill="url(#bg)" />
+              <rect x="12" y="14" width="24" height="24" rx="7" fill="#0F2033" stroke="#284A66" stroke-width="1.5" />
+              <rect x="15.5" y="17.5" width="5.5" height="5.5" rx="2" fill="#16324B" />
+              <rect x="23" y="17.5" width="5.5" height="5.5" rx="2" fill="url(#accent)" />
+              <rect x="30.5" y="17.5" width="2.5" height="5.5" rx="1.25" fill="#16324B" />
+              <rect x="15.5" y="25" width="5.5" height="5.5" rx="2" fill="url(#accent)" />
+              <rect x="23" y="25" width="5.5" height="5.5" rx="2" fill="#16324B" />
+              <rect x="30.5" y="25" width="2.5" height="5.5" rx="1.25" fill="url(#signal)" />
+              <rect x="15.5" y="32.5" width="5.5" height="2.5" rx="1.25" fill="#16324B" />
+              <rect x="23" y="32.5" width="5.5" height="2.5" rx="1.25" fill="url(#signal)" />
+              <rect x="30.5" y="32.5" width="2.5" height="2.5" rx="1.25" fill="#16324B" />
+              <path d="M45 18C49.4183 18 53 21.5817 53 26V31H48.5V26.5C48.5 24.0147 46.4853 22 44 22H41.5V18H45Z" fill="#EAF8FF" />
+              <path d="M44 31H53V35.5H41.5V26H46V30C46 30.5523 45.5523 31 45 31H44Z" fill="#EAF8FF" />
+              <path d="M41.5 43H53" stroke="#2AE4C8" stroke-width="3.2" stroke-linecap="round" />
+              <path d="M41.5 49H50" stroke="#FDD76B" stroke-width="3.2" stroke-linecap="round" />
+              <defs>
+                <linearGradient id="bg" x1="6" y1="4" x2="58" y2="60" gradientUnits="userSpaceOnUse">
+                  <stop stop-color="#0A1626" />
+                  <stop offset="1" stop-color="#12304A" />
+                </linearGradient>
+                <linearGradient id="accent" x1="18" y1="18" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+                  <stop stop-color="#2AE4C8" />
+                  <stop offset="1" stop-color="#31AFFF" />
+                </linearGradient>
+                <linearGradient id="signal" x1="31" y1="21" x2="38" y2="28" gradientUnits="userSpaceOnUse">
+                  <stop stop-color="#FDD76B" />
+                  <stop offset="1" stop-color="#FF944D" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </span>
+          <span class="sr-brand-title">GridAI</span>
         </a>
         <button
           class="navbar-toggler"
@@ -60,7 +92,7 @@
                 <li><button class="dropdown-item" data-sr-theme="auto">Авто</button></li>
               </ul>
             </div>
-            <a class="btn btn-outline-secondary" href="login.html">Войти</a>
+            <a class="btn btn-outline-secondary" href="https://auth.gridai.ru/career">Я соискатель</a>
             <a class="btn btn-primary" href="#launch">Запросить доступ</a>
           </div>
         </div>
@@ -72,27 +104,43 @@
         <div class="container">
           <div class="row align-items-center g-5">
             <div class="col-lg-6">
-              <p class="eyebrow">TG‑бот + рынок навыков</p>
-              <h1 class="display-5 fw-bold">Находим вакансии и объясняем, почему они подходят.</h1>
+              <p class="eyebrow">два продукта на одной AI-платформе</p>
+              <h1 class="display-5 fw-bold">Отдельный путь для кандидата и отдельный путь для hiring-команды.</h1>
               <p class="lead">
-                SkillRadar превращает запрос в фильтры рынка и выдаёт топ‑вакансии с пояснениями.
-                Для HR — быстрые отчёты по роли, навыкам, зарплатам и конкурентам.
+                GridAI разделяет два сценария без компромиссов: соискателю даёт вакансии, дайджесты и рынок навыков,
+                а hiring-команде — аналитику ролей, конкурентов, вилок и шаблонов вакансий.
               </p>
               <div class="d-flex flex-wrap gap-2 mt-4">
-                <a class="btn btn-primary btn-lg" href="#launch">Запустить пилот</a>
+                <a class="btn btn-primary btn-lg" href="https://auth.gridai.ru/career">Я соискатель, ищу работу</a>
                 <a
                   class="btn btn-outline-secondary btn-lg"
-                  href="https://t.me/skillradar_hr_bot"
+                  href="https://auth.gridai.ru/hiring"
+                >
+                  Я рекрутер, нужна аналитика
+                </a>
+              </div>
+              <div class="d-flex flex-wrap gap-2 mt-3">
+                <a
+                  class="btn btn-outline-secondary"
+                  href="https://t.me/GridAI_Careers_bot"
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Открыть в Telegram
+                  Careers bot
+                </a>
+                <a
+                  class="btn btn-outline-secondary"
+                  href="https://t.me/GridAI_Recruiter_bot"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Recruiter bot
                 </a>
               </div>
               <div class="d-flex flex-wrap gap-2 mt-4">
-                <span class="sr-pill">TG‑бот</span>
-                <span class="sr-pill">RU рынок</span>
-                <span class="sr-pill">HR‑аналитика</span>
+                <span class="sr-pill">Career</span>
+                <span class="sr-pill">Hiring</span>
+                <span class="sr-pill">Auth on subdomains</span>
               </div>
             </div>
             <div class="col-lg-5 offset-lg-1">
@@ -263,7 +311,7 @@
               <h2 class="fw-semibold mb-2">Запустить пилот</h2>
               <p class="sr-muted mb-0">Подходит для команд HR и для соискателей. Включим нужный режим.</p>
             </div>
-            <a class="btn btn-primary btn-lg" href="mailto:hello@skillradar.ai">Связаться</a>
+            <a class="btn btn-primary btn-lg" href="mailto:hello@gridai.ru">Связаться</a>
           </div>
         </div>
       </section>
@@ -271,7 +319,7 @@
 
     <footer class="sr-footer">
       <div class="container d-flex justify-content-between flex-wrap gap-2">
-        <span>SkillRadar © 2026</span>
+        <span>GridAI © 2026</span>
         <span>Telegram‑бот и HR‑аналитика</span>
       </div>
     </footer>

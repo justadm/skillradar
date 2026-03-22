@@ -280,7 +280,7 @@ const exportCsv = () => {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = 'skillradar-reports.csv';
+  link.download = 'gridai-reports.csv';
   link.click();
   URL.revokeObjectURL(url);
 };
@@ -341,7 +341,7 @@ const performDelete = async () => {
 };
 
 useHead(`
-  <title>SkillRadar — Отчёты</title>
+  <title>GridAI — Отчёты</title>
   <meta name="robots" content="noindex,nofollow" />
 `);
 </script>

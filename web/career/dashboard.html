@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GridAI Career — Кабинет</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
+    <script>
+      (() => {
+        const stored = localStorage.getItem('sr-theme') || 'auto';
+        const preferred = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-bs-theme', stored === 'auto' ? preferred : stored);
+      })();
+    </script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="career.css" />
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg bg-body-tertiary border-bottom sticky-top">
+      <div class="container-fluid">
+        <a class="navbar-brand sr-brand" href="dashboard.html">
+          <span class="sr-brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="64" height="64" rx="16" fill="url(#bg)" />
+              <rect x="12" y="14" width="24" height="24" rx="7" fill="#0F2033" stroke="#284A66" stroke-width="1.5" />
+              <rect x="15.5" y="17.5" width="5.5" height="5.5" rx="2" fill="#16324B" />
+              <rect x="23" y="17.5" width="5.5" height="5.5" rx="2" fill="url(#accent)" />
+              <rect x="30.5" y="17.5" width="2.5" height="5.5" rx="1.25" fill="#16324B" />
+              <rect x="15.5" y="25" width="5.5" height="5.5" rx="2" fill="url(#accent)" />
+              <rect x="23" y="25" width="5.5" height="5.5" rx="2" fill="#16324B" />
+              <rect x="30.5" y="25" width="2.5" height="5.5" rx="1.25" fill="url(#signal)" />
+              <rect x="15.5" y="32.5" width="5.5" height="2.5" rx="1.25" fill="#16324B" />
+              <rect x="23" y="32.5" width="5.5" height="2.5" rx="1.25" fill="url(#signal)" />
+              <rect x="30.5" y="32.5" width="2.5" height="2.5" rx="1.25" fill="#16324B" />
+              <path d="M42 47L49 40L53 44" stroke="#9AFF7A" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M42 36L46 32L49 35L55 27" stroke="#EAF8FF" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" />
+              <defs>
+                <linearGradient id="bg" x1="6" y1="4" x2="58" y2="60" gradientUnits="userSpaceOnUse">
+                  <stop stop-color="#0A1626" />
+                  <stop offset="1" stop-color="#12304A" />
+                </linearGradient>
+                <linearGradient id="accent" x1="18" y1="18" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+                  <stop stop-color="#2AE4C8" />
+                  <stop offset="1" stop-color="#31AFFF" />
+                </linearGradient>
+                <linearGradient id="signal" x1="31" y1="21" x2="38" y2="28" gradientUnits="userSpaceOnUse">
+                  <stop stop-color="#FDD76B" />
+                  <stop offset="1" stop-color="#FF944D" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </span>
+          <span class="sr-brand-copy">
+            <span class="sr-brand-title">GridAI</span>
+            <span class="sr-brand-subtitle">Career Portal</span>
+          </span>
+        </a>
+        <div class="d-flex align-items-center gap-2">
+          <a class="btn btn-outline-secondary" href="https://gridai.ru" target="_blank" rel="noreferrer">На сайт</a>
+          <div class="dropdown">
+            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+              Тема
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><button class="dropdown-item" data-sr-theme="light">Светлая</button></li>
+              <li><button class="dropdown-item" data-sr-theme="dark">Темная</button></li>
+              <li><button class="dropdown-item" data-sr-theme="auto">Авто</button></li>
+            </ul>
+          </div>
+          <a class="btn btn-primary" href="https://t.me/GridAI_Careers_bot" target="_blank" rel="noreferrer">Открыть бота</a>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container-fluid">
+      <div class="row">
+        <nav class="col-md-3 col-lg-2 d-md-block bg-body-tertiary sidebar collapse sr-sidebar">
+          <div class="position-sticky pt-3">
+            <ul class="nav flex-column">
+              <li class="nav-item"><a class="nav-link active" href="#overview">Обзор</a></li>
+              <li class="nav-item"><a class="nav-link" href="#digests">Мои дайджесты</a></li>
+              <li class="nav-item"><a class="nav-link" href="#saved">Сохранённые вакансии</a></li>
+              <li class="nav-item"><a class="nav-link" href="#queries">Поисковые запросы</a></li>
+              <li class="nav-item"><a class="nav-link" href="#market">Рынок навыков</a></li>
+              <li class="nav-item"><a class="nav-link" href="#profile">Профиль кандидата</a></li>
+            </ul>
+          </div>
+        </nav>
+
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4">
+          <div class="d-flex flex-wrap justify-content-between align-items-center border-bottom pb-3 mb-4">
+            <div>
+              <h1 class="h3 mb-1">Career Dashboard</h1>
+              <p class="sr-muted mb-0">Всё, что нужно кандидату: дайджесты, сохранённые вакансии и личные сигналы рынка.</p>
+            </div>
+            <div class="btn-group">
+              <button class="btn btn-outline-secondary btn-sm">Обновить</button>
+              <a class="btn btn-primary btn-sm" href="https://auth.gridai.ru/career">Сменить способ входа</a>
+            </div>
+          </div>
+
+          <div class="alert alert-info d-none" data-sr-loading>Проверяем сессию и подгружаем виджет карьеры…</div>
+          <div class="alert alert-danger d-none" data-sr-error>Сессия не найдена. Перенаправляем на вход…</div>
+
+          <div class="row g-3 mb-4" id="overview">
+            <div class="col-lg-4">
+              <div class="card sr-card h-100">
+                <div class="card-body">
+                  <p class="sr-muted mb-2">Активных дайджестов</p>
+                  <h2 class="h3 mb-1" id="sr-career-digests-count">2</h2>
+                  <small class="sr-muted">1 обновлён сегодня</small>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-4">
+              <div class="card sr-card h-100">
+                <div class="card-body">
+                  <p class="sr-muted mb-2">Сохранённых вакансий</p>
+                  <h2 class="h3 mb-1" id="sr-career-saved-count">14</h2>
+                  <small class="sr-muted">6 отмечены как приоритетные</small>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-4">
+              <div class="card sr-card h-100">
+                <div class="card-body">
+                  <p class="sr-muted mb-2">Пульс рынка</p>
+                  <h2 class="h3 mb-1" id="sr-career-market-pulse">Backend +12%</h2>
+                  <small class="sr-muted">По вашим ключевым запросам за 7 дней</small>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-xl-7">
+              <div class="card sr-card h-100" id="digests">
+                <div class="card-body">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <h3 class="h5 mb-0">Мои дайджесты</h3>
+                    <a class="btn btn-outline-secondary btn-sm" href="https://t.me/GridAI_Careers_bot" target="_blank" rel="noreferrer">Управлять в боте</a>
+                  </div>
+                  <div class="list-group list-group-flush mt-3" id="sr-career-digests"></div>
+                </div>
+              </div>
+            </div>
+            <div class="col-xl-5">
+              <div class="card sr-card h-100" id="saved">
+                <div class="card-body">
+                  <h3 class="h5">Сохранённые вакансии</h3>
+                  <div class="list-group list-group-flush mt-3" id="sr-career-saved"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-3 mt-1">
+            <div class="col-xl-7">
+              <div class="card sr-card h-100" id="queries">
+                <div class="card-body">
+                  <h3 class="h5">Мои поисковые запросы</h3>
+                  <div class="table-responsive mt-3">
+                    <table class="table table-sm align-middle">
+                      <thead>
+                        <tr>
+                          <th>Запрос</th>
+                          <th>Рынок</th>
+                          <th>Обновление</th>
+                        </tr>
+                      </thead>
+                      <tbody id="sr-career-queries"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-xl-5">
+              <div class="card sr-card h-100" id="market">
+                <div class="card-body">
+                  <h3 class="h5">Навыки и рынок</h3>
+                  <ul class="list-unstyled sr-muted mt-3 mb-0" id="sr-career-market"></ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card sr-card mt-3" id="profile">
+            <div class="card-body">
+              <h3 class="h5">Профиль кандидата</h3>
+              <div class="row g-3 mt-1">
+                <div class="col-lg-4"><div class="sr-profile-tile"><span class="sr-muted">Целевая роль</span><strong id="sr-career-role">AI Backend Engineer</strong></div></div>
+                <div class="col-lg-4"><div class="sr-profile-tile"><span class="sr-muted">Формат</span><strong id="sr-career-format">Удалёнка / гибрид</strong></div></div>
+                <div class="col-lg-4"><div class="sr-profile-tile"><span class="sr-muted">Ожидания</span><strong id="sr-career-salary">от 300k</strong></div></div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../theme.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

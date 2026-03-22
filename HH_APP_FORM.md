@@ -5,11 +5,11 @@
 ## 1. Информация о приложении
 
 **Название приложения**  
-SkillRadar
+GridAI
 
 **Redirect URI**  
 Рекомендуемый:  
-`https://skillradar.app/oauth/hh/callback`  
+`https://gridai.ru/oauth/hh/callback`  
 Dev‑вариант:  
 `https://localhost:3000/oauth/hh/callback`  
 

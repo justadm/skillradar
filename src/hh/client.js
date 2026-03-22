@@ -24,7 +24,7 @@ async function getJson(url) {
   const res = await request(url, {
     method: 'GET',
     headers: {
-      'User-Agent': 'skillradar-bot/0.1',
+      'User-Agent': 'gridai-bot/0.1',
       'Accept': 'application/json',
       ...authHeader
     }

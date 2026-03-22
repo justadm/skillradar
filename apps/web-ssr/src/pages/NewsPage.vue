@@ -34,7 +34,7 @@ const items = [
 ];
 
 useHead(`
-  <title>SkillRadar — Новости и анонсы</title>
-  <meta name="description" content="Релизы, обновления и кейсы SkillRadar." />
+  <title>GridAI — Новости и анонсы</title>
+  <meta name="description" content="Релизы, обновления и кейсы GridAI." />
 `);
 </script>

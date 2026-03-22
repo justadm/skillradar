@@ -311,7 +311,7 @@ const performDelete = async () => {
 };
 
 useHead(`
-  <title>SkillRadar — Команда</title>
+  <title>GridAI — Команда</title>
   <meta name="robots" content="noindex,nofollow" />
 `);
 </script>

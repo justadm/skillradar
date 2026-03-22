@@ -15,7 +15,7 @@
               <ul class="text-secondary">
                 <li v-for="item in plan.items" :key="item">{{ item }}</li>
               </ul>
-              <a class="btn btn-primary w-100" href="https://t.me/skillradar_hr_bot" target="_blank" rel="noreferrer">Запросить доступ</a>
+              <a class="btn btn-primary w-100" href="https://t.me/GridAI_Recruiter_bot" target="_blank" rel="noreferrer">Запросить доступ</a>
             </div>
           </div>
         </div>
@@ -94,7 +94,7 @@ const submit = async () => {
 };
 
 useHead(`
-  <title>SkillRadar — Тарифы</title>
-  <meta name="description" content="Тарифы SkillRadar для HR‑аналитики." />
+  <title>GridAI — Тарифы</title>
+  <meta name="description" content="Тарифы GridAI для HR‑аналитики." />
 `);
 </script>

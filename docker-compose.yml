@@ -3,7 +3,7 @@ version: "3.9"
 services:
   web:
     build: .
-    container_name: skillradar-web
+    container_name: gridai-web
     env_file:
       - .env
     environment:
@@ -15,14 +15,14 @@ services:
       - ./data:/app/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:3000').then(()=>process.exit(0)).catch(()=>process.exit(1))\""]
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:' + (process.env.WEB_PORT || 3000)).then(()=>process.exit(0)).catch(()=>process.exit(1))\""]
       interval: 30s
       timeout: 5s
       retries: 3
 
   frontend:
     image: nginx:1.27-alpine
-    container_name: skillradar-frontend
+    container_name: gridai-frontend
     volumes:
       - ./web:/usr/share/nginx/html:ro
       - ./deploy/nginx/frontend-static.conf:/etc/nginx/conf.d/default.conf:ro
@@ -32,7 +32,7 @@ services:
 
   bot:
     build: .
-    container_name: skillradar-bot
+    container_name: gridai-bot
     env_file:
       - .env
     environment:
@@ -49,19 +49,19 @@ services:
 
   nginx:
     image: nginx:1.27-alpine
-    container_name: skillradar-nginx
+    container_name: gridai-nginx
     profiles: ["standalone-edge"]
     ports:
       - "127.0.0.1:${EDGE_NGINX_HOST_PORT:-18088}:80"
     volumes:
-      - ./deploy/nginx/skillradar.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./deploy/nginx/gridai.ru.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - web
     restart: unless-stopped
 
   monitor:
     image: docker:24-cli
-    container_name: skillradar-monitor
+    container_name: gridai-monitor
     depends_on:
       - web
       - bot
@@ -69,7 +69,7 @@ services:
     environment:
       - ALERT_URL=http://web:3000
       - ALERT_INTERVAL=60
-      - ALERT_BOT_CONTAINER=skillradar-bot
+      - ALERT_BOT_CONTAINER=gridai-bot
       - ALERT_NGINX_CONTAINER=${ALERT_NGINX_CONTAINER:-}
       - ALERT_ON_5XX=true
       - ALERT_TG_BOT_TOKEN=${ALERT_TG_BOT_TOKEN}

@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GridAI — Политика конфиденциальности</title>
+    <meta
+      name="description"
+      content="Политика конфиденциальности GridAI для Telegram-ботов и веб-сервиса."
+    />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <script>
+      (() => {
+        const stored = localStorage.getItem('sr-theme') || 'auto';
+        const preferred = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-bs-theme', stored === 'auto' ? preferred : stored);
+      })();
+    </script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg bg-body-tertiary border-bottom sticky-top">
+      <div class="container">
+        <a class="navbar-brand sr-brand" href="/">
+          <span class="sr-brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="64" height="64" rx="16" fill="url(#bg)" />
+              <rect x="12" y="14" width="24" height="24" rx="7" fill="#0F2033" stroke="#284A66" stroke-width="1.5" />
+              <rect x="15.5" y="17.5" width="5.5" height="5.5" rx="2" fill="#16324B" />
+              <rect x="23" y="17.5" width="5.5" height="5.5" rx="2" fill="url(#accent)" />
+              <rect x="30.5" y="17.5" width="2.5" height="5.5" rx="1.25" fill="#16324B" />
+              <rect x="15.5" y="25" width="5.5" height="5.5" rx="2" fill="url(#accent)" />
+              <rect x="23" y="25" width="5.5" height="5.5" rx="2" fill="#16324B" />
+              <rect x="30.5" y="25" width="2.5" height="5.5" rx="1.25" fill="url(#signal)" />
+              <rect x="15.5" y="32.5" width="5.5" height="2.5" rx="1.25" fill="#16324B" />
+              <rect x="23" y="32.5" width="5.5" height="2.5" rx="1.25" fill="url(#signal)" />
+              <rect x="30.5" y="32.5" width="2.5" height="2.5" rx="1.25" fill="#16324B" />
+              <path d="M45 18C49.4183 18 53 21.5817 53 26V31H48.5V26.5C48.5 24.0147 46.4853 22 44 22H41.5V18H45Z" fill="#EAF8FF" />
+              <path d="M44 31H53V35.5H41.5V26H46V30C46 30.5523 45.5523 31 45 31H44Z" fill="#EAF8FF" />
+              <path d="M41.5 43H53" stroke="#2AE4C8" stroke-width="3.2" stroke-linecap="round" />
+              <path d="M41.5 49H50" stroke="#FDD76B" stroke-width="3.2" stroke-linecap="round" />
+              <defs>
+                <linearGradient id="bg" x1="6" y1="4" x2="58" y2="60" gradientUnits="userSpaceOnUse">
+                  <stop stop-color="#0A1626" />
+                  <stop offset="1" stop-color="#12304A" />
+                </linearGradient>
+                <linearGradient id="accent" x1="18" y1="18" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+                  <stop stop-color="#2AE4C8" />
+                  <stop offset="1" stop-color="#31AFFF" />
+                </linearGradient>
+                <linearGradient id="signal" x1="31" y1="21" x2="38" y2="28" gradientUnits="userSpaceOnUse">
+                  <stop stop-color="#FDD76B" />
+                  <stop offset="1" stop-color="#FF944D" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </span>
+          <span class="sr-brand-title">GridAI</span>
+        </a>
+      </div>
+    </nav>
+
+    <main class="sr-section">
+      <div class="container" style="max-width: 860px">
+        <p class="eyebrow">Privacy</p>
+        <h1 class="display-6 fw-bold mb-4">Политика конфиденциальности</h1>
+        <p class="lead">
+          GridAI использует только данные, необходимые для работы Telegram-ботов и веб-сервиса.
+        </p>
+
+        <div class="card sr-card mt-4">
+          <div class="card-body">
+            <h2 class="h5 fw-semibold">1. Какие данные мы обрабатываем</h2>
+            <p class="sr-muted mb-0">
+              Мы можем обрабатывать Telegram ID, текст запросов, выбранные режимы, стоп-слова,
+              параметры дайджестов, служебные логи и технические данные, связанные с использованием сервиса.
+            </p>
+          </div>
+        </div>
+
+        <div class="card sr-card mt-3">
+          <div class="card-body">
+            <h2 class="h5 fw-semibold">2. Для чего используются данные</h2>
+            <p class="sr-muted mb-0">
+              Данные используются для подбора вакансий, подготовки аналитики, отправки дайджестов,
+              улучшения качества ответов и обеспечения стабильной работы сервиса.
+            </p>
+          </div>
+        </div>
+
+        <div class="card sr-card mt-3">
+          <div class="card-body">
+            <h2 class="h5 fw-semibold">3. Что мы не делаем</h2>
+            <p class="sr-muted mb-0">
+              Мы не совершаем действия от вашего имени на hh.ru, не публикуем ваши данные и не продаем
+              персональные данные третьим лицам.
+            </p>
+          </div>
+        </div>
+
+        <div class="card sr-card mt-3">
+          <div class="card-body">
+            <h2 class="h5 fw-semibold">4. Хранение и безопасность</h2>
+            <p class="sr-muted mb-0">
+              Мы применяем разумные технические меры для защиты данных и ограничиваем доступ к ним
+              только задачами, связанными с работой GridAI.
+            </p>
+          </div>
+        </div>
+
+        <div class="card sr-card mt-3">
+          <div class="card-body">
+            <h2 class="h5 fw-semibold">5. Контакты</h2>
+            <p class="sr-muted mb-0">
+              Если у вас есть вопросы по обработке данных, напишите нам: <a href="mailto:hello@gridai.ru">hello@gridai.ru</a>
+            </p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>
